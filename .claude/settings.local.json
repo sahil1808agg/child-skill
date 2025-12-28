@@ -1,0 +1,25 @@
+{
+  "permissions": {
+    "allow": [
+      "Bash(mkdir:*)",
+      "Bash(npx create-react-app . --template typescript)",
+      "Bash(npm create:*)",
+      "Bash(npm install)",
+      "Bash(npm run dev:*)",
+      "Bash(timeout /t 3)",
+      "Bash(mongod:*)",
+      "Bash(dir \"C:\\\\Users\\\\Sahil\\\\Downloads\\\\Reyansh*.pdf\")",
+      "Bash(npx ts-node:*)",
+      "Bash(dir:*)",
+      "Bash(curl:*)",
+      "Bash(python -m json.tool:*)",
+      "Bash(node create-test-report.js:*)",
+      "Bash(mongosh enhance-your-child:*)",
+      "Bash(mongo enhance-your-child:*)",
+      "Bash(git add:*)",
+      "Bash(git commit:*)",
+      "Bash(git remote add:*)",
+      "Bash(git push:*)"
+    ]
+  }
+}

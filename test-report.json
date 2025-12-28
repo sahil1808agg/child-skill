@@ -1,0 +1,31 @@
+{
+  "studentId": "695134071909236a8065af3e",
+  "reportDate": "2026-03-15",
+  "academicYear": "2025-2026",
+  "term": "Trimester 2",
+  "reportType": "ib-standards",
+  "ibSubjectAreas": [
+    {
+      "subjectName": "Hindi",
+      "effortGrade": "A"
+    },
+    {
+      "subjectName": "PSPE",
+      "effortGrade": "A"
+    },
+    {
+      "subjectName": "Arts",
+      "effortGrade": "E"
+    },
+    {
+      "subjectName": "Mathematics",
+      "effortGrade": "D"
+    },
+    {
+      "subjectName": "Language",
+      "effortGrade": "A"
+    }
+  ],
+  "areasOfStrength": ["Excellent progress in Arts", "Strong mathematical thinking"],
+  "areasOfImprovement": []
+}

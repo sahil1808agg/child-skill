@@ -1,0 +1,296 @@
+.student-profile {
+  padding: 2rem 0;
+}
+
+.profile-header {
+  background: white;
+  padding: 2rem;
+  border-radius: 8px;
+  box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+  margin-bottom: 2rem;
+  display: flex;
+  align-items: center;
+  gap: 2rem;
+}
+
+.profile-avatar {
+  width: 100px;
+  height: 100px;
+  border-radius: 50%;
+  background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+  color: white;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 3rem;
+  font-weight: bold;
+}
+
+.profile-info h1 {
+  margin: 0 0 0.5rem 0;
+  color: #2c3e50;
+}
+
+.profile-info p {
+  margin: 0.25rem 0;
+  color: #666;
+}
+
+.report-count {
+  display: flex;
+  gap: 1rem;
+  align-items: center;
+  margin-top: 1rem;
+}
+
+.badge {
+  background: #3498db;
+  color: white;
+  padding: 0.4rem 0.8rem;
+  border-radius: 20px;
+  font-size: 0.9rem;
+  font-weight: 600;
+}
+
+.timeline-info {
+  color: #27ae60;
+  font-size: 0.9rem;
+  font-weight: 500;
+}
+
+.analysis-section {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
+  gap: 1.5rem;
+  margin-bottom: 2rem;
+}
+
+.analysis-card {
+  background: white;
+  padding: 1.5rem;
+  border-radius: 8px;
+  box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+}
+
+.analysis-card h3 {
+  margin-top: 0;
+  margin-bottom: 1rem;
+  color: #2c3e50;
+}
+
+.analysis-card ul {
+  list-style: none;
+  padding: 0;
+  margin: 0;
+}
+
+.analysis-card li {
+  padding: 0.5rem 0;
+  border-bottom: 1px solid #f0f0f0;
+}
+
+.analysis-card li:last-child {
+  border-bottom: none;
+}
+
+.strengths h3 {
+  color: #27ae60;
+}
+
+.improvements h3 {
+  color: #e74c3c;
+}
+
+.trend-improving {
+  color: #27ae60;
+  font-size: 0.95rem;
+  margin: 1rem 0 0.5rem 0;
+}
+
+.trend-declining {
+  color: #e74c3c;
+  font-size: 0.95rem;
+  margin: 1rem 0 0.5rem 0;
+}
+
+.charts-section {
+  background: white;
+  padding: 2rem;
+  border-radius: 8px;
+  box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+  margin-bottom: 2rem;
+}
+
+.charts-section h2 {
+  margin-top: 0;
+  color: #2c3e50;
+}
+
+.chart-container {
+  margin: 2rem 0;
+}
+
+.chart-container h3 {
+  color: #555;
+  margin-bottom: 1rem;
+}
+
+.reports-section {
+  background: white;
+  padding: 2rem;
+  border-radius: 8px;
+  box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+}
+
+.section-header {
+  margin-bottom: 1.5rem;
+}
+
+.section-header h2 {
+  margin: 0 0 0.5rem 0;
+  color: #2c3e50;
+}
+
+.upload-prompt {
+  color: #666;
+  font-size: 0.95rem;
+  margin: 0.5rem 0 0 0;
+  padding: 0.75rem;
+  background: #fff3cd;
+  border-left: 3px solid #ffc107;
+  border-radius: 4px;
+}
+
+.reports-section h2 {
+  margin-top: 0;
+  color: #2c3e50;
+}
+
+.reports-list {
+  display: flex;
+  flex-direction: column;
+  gap: 1.5rem;
+}
+
+.report-card {
+  border: 1px solid #e0e0e0;
+  border-radius: 6px;
+  padding: 1.5rem;
+  background: #fafafa;
+}
+
+.report-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: flex-start;
+  margin-bottom: 1rem;
+  padding-bottom: 1rem;
+  border-bottom: 2px solid #e0e0e0;
+}
+
+.report-header > div {
+  display: flex;
+  flex-direction: column;
+  gap: 0.25rem;
+}
+
+.report-number {
+  font-size: 0.85rem;
+  color: #3498db;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+}
+
+.report-header h3 {
+  margin: 0;
+  color: #2c3e50;
+}
+
+.report-date {
+  color: #666;
+  font-size: 0.9rem;
+}
+
+.overall-grade {
+  display: flex;
+  gap: 1rem;
+  align-items: center;
+  margin-bottom: 1rem;
+  padding: 1rem;
+  background: white;
+  border-radius: 4px;
+}
+
+.percentage {
+  font-size: 2rem;
+  font-weight: bold;
+  color: #3498db;
+}
+
+.grade {
+  font-size: 1.5rem;
+  color: #27ae60;
+  font-weight: 500;
+}
+
+.subjects-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(200px, 1fr));
+  gap: 1rem;
+  margin: 1rem 0;
+}
+
+.subject-item {
+  background: white;
+  padding: 1rem;
+  border-radius: 4px;
+  display: flex;
+  flex-direction: column;
+  gap: 0.25rem;
+}
+
+.subject-name {
+  font-weight: 500;
+  color: #2c3e50;
+}
+
+.subject-grade {
+  color: #27ae60;
+  font-weight: bold;
+}
+
+.subject-percentage {
+  color: #666;
+  font-size: 0.9rem;
+}
+
+.teacher-comments {
+  margin-top: 1rem;
+  padding: 1rem;
+  background: white;
+  border-radius: 4px;
+  border-left: 4px solid #3498db;
+}
+
+.teacher-comments strong {
+  display: block;
+  margin-bottom: 0.5rem;
+  color: #2c3e50;
+}
+
+.teacher-comments p {
+  margin: 0;
+  color: #555;
+  line-height: 1.6;
+}
+
+.loading, .error {
+  text-align: center;
+  padding: 3rem;
+  color: #666;
+}
+
+.error {
+  color: #e74c3c;
+}
