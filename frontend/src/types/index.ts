@@ -14,6 +14,14 @@ export interface Subject {
   remarks?: string;
 }
 
+export interface ReportSummary {
+  overallPerformance: string;
+  keyStrengths: string[];
+  areasNeedingAttention: string[];
+  teacherHighlights: string[];
+  generatedAt: string;
+}
+
 export interface Report {
   _id: string;
   studentId: string;
@@ -29,6 +37,7 @@ export interface Report {
   attendance?: number;
   behavior?: string;
   uploadedFile?: string;
+  summary?: ReportSummary;
   createdAt: string;
 }
 
@@ -50,4 +59,18 @@ export interface Analysis {
     stable: string[];
   };
   recommendations: string[];
+}
+
+export interface ActivityRecommendation {
+  id: string;
+  name: string;
+  category: string;
+  priority: 'HIGH' | 'MEDIUM' | 'LOW';
+  targetAttributes: string[];
+  description: string;
+  benefits: string[];
+  frequency: string;
+  estimatedCost: string;
+  ageAppropriate: boolean;
+  whyRecommended: string;
 }

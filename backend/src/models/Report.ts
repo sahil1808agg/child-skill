@@ -7,6 +7,14 @@ export interface ISubject {
   remarks?: string
 }
 
+export interface IReportSummary {
+  overallPerformance: string
+  keyStrengths: string[]
+  areasNeedingAttention: string[]
+  teacherHighlights: string[]
+  generatedAt: Date
+}
+
 export interface ISkillAssessment {
   category: string // e.g., "Social Skills", "Work Habits", "Learning Skills"
   skillName: string
@@ -42,6 +50,7 @@ export interface IReport extends Document {
   reportDate: Date
   academicYear: string
   term: string
+  grade?: string  // Student's grade/class level (e.g., "1", "2", "Pre-K", "Kindergarten")
 
   // Report Type - NEW: Determines which fields are populated
   reportType?: 'traditional' | 'ib-standards' | 'mixed'
@@ -85,6 +94,9 @@ export interface IReport extends Document {
   // File Management
   uploadedFile: string
   extractedText?: string
+
+  // AI-Generated Summary
+  summary?: IReportSummary
 
   createdAt: Date
   updatedAt: Date
@@ -153,6 +165,9 @@ const ReportSchema = new Schema<IReport>(
       type: String,
       required: true
     },
+    grade: {
+      type: String
+    },
 
     // Report Type
     reportType: {
@@ -196,7 +211,16 @@ const ReportSchema = new Schema<IReport>(
 
     // File Management
     uploadedFile: { type: String, required: true },
-    extractedText: { type: String }
+    extractedText: { type: String },
+
+    // AI-Generated Summary
+    summary: {
+      overallPerformance: { type: String },
+      keyStrengths: [{ type: String }],
+      areasNeedingAttention: [{ type: String }],
+      teacherHighlights: [{ type: String }],
+      generatedAt: { type: Date }
+    }
   },
   {
     timestamps: true
