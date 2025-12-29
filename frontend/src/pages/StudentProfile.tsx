@@ -1,8 +1,7 @@
 import { useState, useEffect } from 'react'
 import { useParams } from 'react-router-dom'
-import { LineChart, Line, BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, Legend, ResponsiveContainer } from 'recharts'
-import { Student, Report, Analysis } from '../types'
-import { fetchStudent, fetchStudentReports, fetchStudentAnalysis } from '../services/api'
+import { Student, Report, Analysis, ActivityRecommendation } from '../types'
+import { fetchStudent, fetchStudentReports, fetchStudentAnalysis, deleteReport, fetchActivityRecommendations } from '../services/api'
 import './StudentProfile.css'
 
 export default function StudentProfile() {
@@ -10,6 +9,7 @@ export default function StudentProfile() {
   const [student, setStudent] = useState<Student | null>(null)
   const [reports, setReports] = useState<Report[]>([])
   const [analysis, setAnalysis] = useState<Analysis | null>(null)
+  const [recommendations, setRecommendations] = useState<ActivityRecommendation[]>([])
   const [loading, setLoading] = useState(true)
 
   useEffect(() => {
@@ -29,10 +29,39 @@ export default function StudentProfile() {
       setStudent(studentData)
       setReports(reportsData)
       setAnalysis(analysisData)
+
+      // Fetch activity recommendations for the latest report
+      if (reportsData.length > 0) {
+        const latestReport = reportsData[reportsData.length - 1]
+        try {
+          const recommendationsData = await fetchActivityRecommendations(latestReport._id)
+          setRecommendations(recommendationsData)
+        } catch (error) {
+          console.error('Error loading activity recommendations:', error)
+        }
+      }
     } catch (error) {
       console.error('Error loading student data:', error)
     } finally {
       setLoading(false)
+    }
+  }
+
+  const handleDeleteReport = async (reportId: string) => {
+    if (!window.confirm('Are you sure you want to delete this report? This action cannot be undone.')) {
+      return
+    }
+
+    try {
+      await deleteReport(reportId)
+
+      // Refresh data after deletion
+      if (id) {
+        await loadStudentData(id)
+      }
+    } catch (error) {
+      console.error('Error deleting report:', error)
+      alert('Failed to delete report. Please try again.')
     }
   }
 
@@ -43,19 +72,6 @@ export default function StudentProfile() {
   if (!student) {
     return <div className="error">Student not found</div>
   }
-
-  const prepareChartData = () => {
-    return reports.map(report => ({
-      date: new Date(report.reportDate).toLocaleDateString('en-US', { month: 'short', year: 'numeric' }),
-      percentage: report.overallPercentage || 0,
-      ...report.subjects.reduce((acc, subject) => {
-        acc[subject.name] = subject.percentage || 0
-        return acc
-      }, {} as Record<string, number>)
-    }))
-  }
-
-  const chartData = prepareChartData()
 
   return (
     <div className="student-profile">
@@ -74,67 +90,57 @@ export default function StudentProfile() {
         </div>
       </div>
 
-      {analysis && (
-        <div className="analysis-section">
-          <div className="analysis-card strengths">
-            <h3>Strengths</h3>
-            <ul>
-              {analysis.strengths.map((strength, idx) => (
-                <li key={idx}>{strength}</li>
-              ))}
-            </ul>
+      {recommendations.length > 0 && (
+        <div className="recommendations-section">
+          <div className="section-header">
+            <h2>Recommended Activities</h2>
+            <p className="section-subtitle">Based on latest report analysis</p>
           </div>
+          <div className="recommendations-grid">
+            {recommendations.map((activity) => (
+              <div key={activity.id} className={`activity-card priority-${activity.priority.toLowerCase()}`}>
+                <div className="activity-header">
+                  <h3>{activity.name}</h3>
+                  <span className={`priority-badge ${activity.priority.toLowerCase()}`}>
+                    {activity.priority}
+                  </span>
+                </div>
+                <div className="activity-category">{activity.category}</div>
+                <p className="activity-description">{activity.description}</p>
 
-          <div className="analysis-card improvements">
-            <h3>Areas for Improvement</h3>
-            <ul>
-              {analysis.improvements.map((improvement, idx) => (
-                <li key={idx}>{improvement}</li>
-              ))}
-            </ul>
-          </div>
+                <div className="activity-details">
+                  <div className="detail-item">
+                    <strong>Frequency:</strong> {activity.frequency}
+                  </div>
+                  <div className="detail-item">
+                    <strong>Estimated Cost:</strong> {activity.estimatedCost}
+                  </div>
+                </div>
 
-          <div className="analysis-card trends">
-            <h3>Performance Trends</h3>
-            {analysis.trends.improving.length > 0 && (
-              <div>
-                <h4 className="trend-improving">Improving</h4>
-                <ul>
-                  {analysis.trends.improving.map((subject, idx) => (
-                    <li key={idx}>{subject}</li>
-                  ))}
-                </ul>
+                <div className="activity-benefits">
+                  <strong>Benefits:</strong>
+                  <ul>
+                    {activity.benefits.slice(0, 3).map((benefit, idx) => (
+                      <li key={idx}>{benefit}</li>
+                    ))}
+                  </ul>
+                </div>
+
+                <div className="activity-attributes">
+                  <strong>Target IB Attributes:</strong>
+                  <div className="attributes-list">
+                    {activity.targetAttributes.map((attr, idx) => (
+                      <span key={idx} className="attribute-tag">{attr}</span>
+                    ))}
+                  </div>
+                </div>
+
+                <div className="why-recommended">
+                  <strong>Why recommended:</strong>
+                  <p>{activity.whyRecommended}</p>
+                </div>
               </div>
-            )}
-            {analysis.trends.declining.length > 0 && (
-              <div>
-                <h4 className="trend-declining">Needs Attention</h4>
-                <ul>
-                  {analysis.trends.declining.map((subject, idx) => (
-                    <li key={idx}>{subject}</li>
-                  ))}
-                </ul>
-              </div>
-            )}
-          </div>
-        </div>
-      )}
-
-      {chartData.length > 0 && (
-        <div className="charts-section">
-          <h2>Progress Over Time</h2>
-          <div className="chart-container">
-            <h3>Overall Performance</h3>
-            <ResponsiveContainer width="100%" height={300}>
-              <LineChart data={chartData}>
-                <CartesianGrid strokeDasharray="3 3" />
-                <XAxis dataKey="date" />
-                <YAxis domain={[0, 100]} />
-                <Tooltip />
-                <Legend />
-                <Line type="monotone" dataKey="percentage" stroke="#3498db" name="Overall %" />
-              </LineChart>
-            </ResponsiveContainer>
+            ))}
           </div>
         </div>
       )}
@@ -159,35 +165,88 @@ export default function StudentProfile() {
                     <span className="report-number">Report #{reports.length - index}</span>
                     <h3>{report.term} - {report.academicYear}</h3>
                   </div>
-                  <span className="report-date">
-                    {new Date(report.reportDate).toLocaleDateString()}
-                  </span>
+                  <div className="report-actions">
+                    <span className="report-date">
+                      {new Date(report.reportDate).toLocaleDateString()}
+                    </span>
+                    <button
+                      className="delete-report-btn"
+                      onClick={() => handleDeleteReport(report._id)}
+                      title="Delete this report"
+                    >
+                      Delete
+                    </button>
+                  </div>
                 </div>
 
-                {report.overallPercentage && (
-                  <div className="overall-grade">
-                    <span className="percentage">{report.overallPercentage}%</span>
-                    <span className="grade">{report.overallGrade}</span>
-                  </div>
-                )}
-
-                <div className="subjects-grid">
-                  {report.subjects.map((subject, idx) => (
-                    <div key={idx} className="subject-item">
-                      <span className="subject-name">{subject.name}</span>
-                      <span className="subject-grade">{subject.grade}</span>
-                      {subject.percentage && (
-                        <span className="subject-percentage">{subject.percentage}%</span>
-                      )}
+                {report.summary ? (
+                  <div className="report-summary">
+                    <div className="summary-section">
+                      <h4>Overall Performance</h4>
+                      <p>{report.summary.overallPerformance}</p>
                     </div>
-                  ))}
-                </div>
 
-                {report.teacherComments && (
-                  <div className="teacher-comments">
-                    <strong>Teacher's Comments:</strong>
-                    <p>{report.teacherComments}</p>
+                    {report.summary.keyStrengths.length > 0 && (
+                      <div className="summary-section strengths">
+                        <h4>Key Strengths</h4>
+                        <ul>
+                          {report.summary.keyStrengths.map((strength, idx) => (
+                            <li key={idx}>{strength}</li>
+                          ))}
+                        </ul>
+                      </div>
+                    )}
+
+                    {report.summary.areasNeedingAttention.length > 0 && (
+                      <div className="summary-section attention">
+                        <h4>Areas to Focus On</h4>
+                        <ul>
+                          {report.summary.areasNeedingAttention.map((area, idx) => (
+                            <li key={idx}>{area}</li>
+                          ))}
+                        </ul>
+                      </div>
+                    )}
+
+                    {report.summary.teacherHighlights.length > 0 && (
+                      <div className="summary-section highlights">
+                        <h4>Teacher Highlights</h4>
+                        <ul>
+                          {report.summary.teacherHighlights.map((highlight, idx) => (
+                            <li key={idx}>{highlight}</li>
+                          ))}
+                        </ul>
+                      </div>
+                    )}
                   </div>
+                ) : (
+                  <>
+                    {report.overallPercentage && (
+                      <div className="overall-grade">
+                        <span className="percentage">{report.overallPercentage}%</span>
+                        <span className="grade">{report.overallGrade}</span>
+                      </div>
+                    )}
+
+                    <div className="subjects-grid">
+                      {report.subjects.map((subject, idx) => (
+                        <div key={idx} className="subject-item">
+                          <span className="subject-name">{subject.name}</span>
+                          <span className="subject-grade">{subject.grade}</span>
+                          {subject.percentage && (
+                            <span className="subject-percentage">{subject.percentage}%</span>
+                          )}
+                        </div>
+                      ))}
+                    </div>
+
+                    {report.teacherComments && (
+                      <div className="teacher-comments">
+                        <strong>Teacher's Comments:</strong>
+                        <p>{report.teacherComments}</p>
+                      </div>
+                    )}
+                  </>
                 )}
               </div>
             ))}

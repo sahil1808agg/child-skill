@@ -1,5 +1,5 @@
 import axios from 'axios'
-import { Student, Report, Analysis } from '../types'
+import { Student, Report, Analysis, ActivityRecommendation } from '../types'
 
 const API_BASE_URL = '/api'
 
@@ -42,6 +42,16 @@ export const uploadReport = async (formData: FormData): Promise<any> => {
 export const deleteStudent = async (studentId: string): Promise<{ message: string; studentName: string; reportsDeleted: number }> => {
   const response = await api.delete(`/students/${studentId}`)
   return response.data
+}
+
+export const deleteReport = async (reportId: string): Promise<{ message: string; studentId: string; reportId: string }> => {
+  const response = await api.delete(`/reports/${reportId}`)
+  return response.data
+}
+
+export const fetchActivityRecommendations = async (reportId: string): Promise<ActivityRecommendation[]> => {
+  const response = await api.get(`/reports/${reportId}/recommendations`)
+  return response.data.recommendations
 }
 
 export default api

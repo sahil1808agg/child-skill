@@ -8,6 +8,7 @@ export interface ParsedIBReportData {
   reportDate: Date
   academicYear: string
   term: string
+  grade?: string  // Student's grade/class level
   reportType: 'ib-standards'
 
   // IB-specific data
@@ -84,6 +85,7 @@ Extract and return a valid JSON object with this structure:
   "reportDate": "YYYY-MM-DD",
   "academicYear": "2024-2025",
   "term": "Semester 1/Term 1/etc",
+  "grade": "1" or "2" or "Pre-K" or "Kindergarten" etc (student's grade/class level),
   "ibSubjectAreas": [
     {
       "subjectName": "English",
@@ -175,6 +177,7 @@ Return ONLY the JSON, no markdown, no code blocks.`
       reportDate: new Date(data.reportDate || new Date()),
       academicYear: data.academicYear || new Date().getFullYear().toString(),
       term: data.term || 'Unknown',
+      grade: data.grade,
       reportType: 'ib-standards',
       ibSubjectAreas: data.ibSubjectAreas || [],
       learnerProfileAttributes: data.learnerProfileAttributes || [],
@@ -198,6 +201,9 @@ Return ONLY the JSON, no markdown, no code blocks.`
     // Extract attendance
     const attendance = this.extractAttendance(text)
 
+    // Extract grade level
+    const grade = this.extractGrade(text)
+
     // Extract teacher comments
     let teacherComments = this.extractTeacherComments(text)
 
@@ -214,6 +220,7 @@ Return ONLY the JSON, no markdown, no code blocks.`
       reportDate: new Date(),
       academicYear: `${currentYear}-${currentYear + 1}`,
       term: this.extractTerm(text),
+      grade,
       reportType: 'ib-standards',
       ibSubjectAreas,
       learnerProfileAttributes,
@@ -410,6 +417,54 @@ Return ONLY the JSON, no markdown, no code blocks.`
     const termPattern = /(semester|term|quarter)\s+(\d+|first|second|third|fourth)/i
     const match = termPattern.exec(text)
     return match ? match[0] : 'Unknown Term'
+  }
+
+  private extractGrade(text: string): string | undefined {
+    // Pattern 1: IB formats like "EYP 3D", "PYP 1A", "MYP 2B" (Early Years/Primary Years/Middle Years Programme)
+    const ibPattern = /\b(EYP|PYP|MYP|DP)\s+(\d+[A-Z]?)\b/i
+    const ibMatch = ibPattern.exec(text)
+    if (ibMatch) {
+      // Extract just the number/section part (e.g., "3D" or "1A")
+      return ibMatch[2].trim()
+    }
+
+    // Pattern 2: "Grade: 1" or "Class: 2" (but not "grade level" or other generic phrases)
+    // More specific to avoid matching "grade level expectations"
+    const gradePattern1 = /(?:^|[^\w])(?:grade|class)[\s:]+([a-z0-9-]+)(?:\s|$)/im
+    const match1 = gradePattern1.exec(text)
+    if (match1 && match1[1].toLowerCase() !== 'level' && match1[1].length <= 10) {
+      return match1[1].trim()
+    }
+
+    // Pattern 3: "1st Grade", "2nd Grade", "Kindergarten", "Pre-K"
+    const gradePattern2 = /(pre-?k|kindergarten|nursery|(?:1st|2nd|3rd|4th|5th|6th|7th|8th|9th|10th|11th|12th)\s+grade)/i
+    const match2 = gradePattern2.exec(text)
+    if (match2) {
+      // Normalize: extract just the number or keep special names
+      const gradeText = match2[1].toLowerCase()
+      if (gradeText.includes('pre-k') || gradeText.includes('prek')) {
+        return 'Pre-K'
+      } else if (gradeText.includes('kindergarten')) {
+        return 'Kindergarten'
+      } else if (gradeText.includes('nursery')) {
+        return 'Nursery'
+      } else {
+        // Extract number from "1st grade" -> "1"
+        const numMatch = gradeText.match(/(\d+)/)
+        if (numMatch) {
+          return numMatch[1]
+        }
+      }
+    }
+
+    // Pattern 4: Look for standalone numbers near "grade" context
+    const gradePattern3 = /(?:^|[^\w])grade\s+(\d+)(?:\s|$)/im
+    const match3 = gradePattern3.exec(text)
+    if (match3) {
+      return match3[1]
+    }
+
+    return undefined
   }
 }
 
