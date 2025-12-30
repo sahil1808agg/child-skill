@@ -145,3 +145,19 @@ export interface ActivityRecommendation {
   targetedAttributes?: string[];
   venues?: Venue[];
 }
+
+export interface ParentAction {
+  category: 'improvement' | 'strength-maintenance';
+  targetArea: string;
+  priority: 'HIGH' | 'MEDIUM' | 'LOW';
+  title: string;
+  description: string;
+  activities: Array<{
+    activity: string;
+    frequency: string;
+    duration: string;
+    tips: string[];
+  }>;
+  expectedOutcome: string;
+  timeToSeeResults: string;
+}

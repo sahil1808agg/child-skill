@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react'
-import { Student, Report, ActivityRecommendation, CurrentActivityEvaluation, CurrentActivity } from '../../types'
+import { Student, Report, ActivityRecommendation, CurrentActivityEvaluation, CurrentActivity, ParentAction } from '../../types'
 import { fetchActivityRecommendations, fetchCurrentActivities, LocationParams } from '../../services/api'
 import './RecommendationsTab.css'
 
@@ -10,6 +10,7 @@ interface Props {
 
 export default function RecommendationsTab({ student, latestReport }: Props) {
   const [recommendations, setRecommendations] = useState<ActivityRecommendation[]>([])
+  const [parentActions, setParentActions] = useState<ParentAction[]>([])
   const [activityEvaluations, setActivityEvaluations] = useState<CurrentActivityEvaluation[]>([])
   const [currentActivities, setCurrentActivities] = useState<CurrentActivity[]>([])
   const [isLoadingRecommendations, setIsLoadingRecommendations] = useState(false)
@@ -62,6 +63,7 @@ export default function RecommendationsTab({ student, latestReport }: Props) {
       )
 
       setRecommendations(response.recommendations)
+      setParentActions(response.parentActions || [])
       if (response.currentActivityEvaluations) {
         setActivityEvaluations(response.currentActivityEvaluations)
       }
@@ -270,6 +272,88 @@ export default function RecommendationsTab({ student, latestReport }: Props) {
                         </div>
                       </div>
                     )}
+                  </div>
+                ))}
+              </div>
+            </div>
+          )}
+
+          {/* Actions for Parents Section */}
+          {parentActions.length > 0 && (
+            <div className="parent-actions-section">
+              <div className="section-header">
+                <h3>👨‍👩‍👧‍👦 Actions for Parents</h3>
+                <p className="section-subtitle-small">
+                  Simple, home-based activities you can do with {student.name} to support their growth
+                </p>
+              </div>
+              <div className="parent-actions-grid">
+                {parentActions.map((action, index) => (
+                  <div key={index} className={`parent-action-card priority-${action.priority.toLowerCase()} category-${action.category}`}>
+                    <div className="action-header">
+                      <div className="action-title-section">
+                        <h4>{action.title}</h4>
+                        <div className="action-badges">
+                          {action.category === 'improvement' && (
+                            <span className="action-badge improvement">
+                              📈 Area to Improve
+                            </span>
+                          )}
+                          {action.category === 'strength-maintenance' && (
+                            <span className="action-badge strength">
+                              ⭐ Maintain Strength
+                            </span>
+                          )}
+                          <span className={`priority-badge priority-${action.priority.toLowerCase()}`}>
+                            {action.priority}
+                          </span>
+                        </div>
+                      </div>
+                      <div className="target-area">
+                        <strong>Target:</strong> {action.targetArea}
+                      </div>
+                    </div>
+
+                    <p className="action-description">{action.description}</p>
+
+                    <div className="activities-list">
+                      <h5>Activities:</h5>
+                      {action.activities.map((activity, actIdx) => (
+                        <div key={actIdx} className="activity-detail">
+                          <div className="activity-name-bar">
+                            <span className="activity-icon">🎯</span>
+                            <strong>{activity.activity}</strong>
+                          </div>
+                          <div className="activity-meta">
+                            <span className="meta-item">
+                              <span className="meta-label">⏰ Frequency:</span> {activity.frequency}
+                            </span>
+                            <span className="meta-item">
+                              <span className="meta-label">⏱️ Duration:</span> {activity.duration}
+                            </span>
+                          </div>
+                          <div className="activity-tips">
+                            <strong>💡 Tips:</strong>
+                            <ul>
+                              {activity.tips.map((tip, tipIdx) => (
+                                <li key={tipIdx}>{tip}</li>
+                              ))}
+                            </ul>
+                          </div>
+                        </div>
+                      ))}
+                    </div>
+
+                    <div className="action-outcomes">
+                      <div className="outcome-item">
+                        <strong>🎯 Expected Outcome:</strong>
+                        <p>{action.expectedOutcome}</p>
+                      </div>
+                      <div className="outcome-item">
+                        <strong>⏳ Time to See Results:</strong>
+                        <p>{action.timeToSeeResults}</p>
+                      </div>
+                    </div>
                   </div>
                 ))}
               </div>
