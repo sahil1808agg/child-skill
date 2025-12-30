@@ -17,6 +17,15 @@ export interface ActivityRecommendation {
   recommendationType?: 'improvement' | 'strength' | 'age-based'; // Why this was recommended (computed during selection)
   targetedAttributes?: string[]; // Specific weak or strong attributes this addresses (computed during selection)
   venues?: Venue[]; // Nearby venues where this activity can be pursued
+  regionalSuitability?: {
+    climatePreference?: Array<'tropical' | 'subtropical' | 'temperate' | 'cold' | 'arid'>;
+    requiresCoastal?: boolean;
+  };
+  feasibilityScore?: {
+    budgetMatch: number;
+    climateMatch: number;
+    overall: number;
+  };
 }
 
 export interface CurrentActivityEvaluation {
@@ -35,7 +44,16 @@ export class ActivityRecommendationService {
    * 2. Reinforcing strengths (30%)
    * 3. Age-appropriate well-rounded development (10%)
    */
-  generateRecommendations(report: any): ActivityRecommendation[] {
+  generateRecommendations(
+    report: any,
+    options?: {
+      budget?: number;
+      budgetFlexibility?: 'strict' | 'moderate' | 'flexible';
+      climateZone?: string;
+      isCoastal?: boolean;
+      minFeasibilityScore?: number;
+    }
+  ): ActivityRecommendation[] {
     const grade = this.parseGrade(report.grade);
     const ageGroup = this.getAgeGroup(grade);
     const age = this.estimateAge(report.grade);
@@ -66,8 +84,38 @@ export class ActivityRecommendationService {
       this.isAgeAppropriate(activity, age)
     );
 
+    // Calculate feasibility scores for all activities
+    const activitiesWithFeasibility = ageAppropriateActivities.map(activity => {
+      const feasibilityScore = this.calculateFeasibilityScore(activity, {
+        budget: options?.budget,
+        budgetFlexibility: options?.budgetFlexibility || 'moderate',
+        climateZone: options?.climateZone,
+        isCoastal: options?.isCoastal
+      });
+
+      return {
+        ...activity,
+        feasibilityScore
+      };
+    });
+
+    // Filter by minimum feasibility score (default 30)
+    const minScore = options?.minFeasibilityScore ?? 30;
+    const feasibleActivities = activitiesWithFeasibility.filter(
+      a => a.feasibilityScore!.overall >= minScore
+    );
+
+    // If too few activities pass filter, relax to show top 15 by feasibility
+    const candidateActivities = feasibleActivities.length >= 15
+      ? feasibleActivities
+      : activitiesWithFeasibility
+          .sort((a, b) => b.feasibilityScore!.overall - a.feasibilityScore!.overall)
+          .slice(0, 15);
+
+    console.log(`Feasibility filtering: ${activitiesWithFeasibility.length} total, ${feasibleActivities.length} passed threshold, ${candidateActivities.length} candidates`);
+
     // Score and rank activities based on alignment with needs
-    const scoredActivities = ageAppropriateActivities.map(activity => {
+    const scoredActivities = candidateActivities.map(activity => {
       const score = this.scoreActivity(activity, analysis);
       return { activity, score };
     });
@@ -929,7 +977,11 @@ export class ActivityRecommendationService {
         estimatedCostUSD: { min: 100, max: 150 },
         activityType: 'indoor',
         ageAppropriate: true,
-        whyRecommended: 'Directly addresses risk-taking development in a structured, safe environment. Most critical for IB learner profile growth.'
+        whyRecommended: 'Directly addresses risk-taking development in a structured, safe environment. Most critical for IB learner profile growth.',
+        regionalSuitability: {
+          climatePreference: ['tropical', 'subtropical', 'temperate', 'cold', 'arid'],
+          requiresCoastal: false
+        }
       });
 
       activities.push({
@@ -950,7 +1002,11 @@ export class ActivityRecommendationService {
         estimatedCostUSD: { min: 80, max: 150 },
         activityType: 'indoor',
         ageAppropriate: true,
-        whyRecommended: 'Essential life skill that naturally develops risk-taking and confidence. Safe environment for facing fears.'
+        whyRecommended: 'Essential life skill that naturally develops risk-taking and confidence. Safe environment for facing fears.',
+        regionalSuitability: {
+          climatePreference: ['tropical', 'subtropical', 'temperate', 'cold', 'arid'],
+          requiresCoastal: false
+        }
       });
 
       activities.push({
@@ -971,7 +1027,11 @@ export class ActivityRecommendationService {
         estimatedCostUSD: { min: 60, max: 120 },
         activityType: 'outdoor',
         ageAppropriate: true,
-        whyRecommended: 'Variety keeps engagement high while developing multiple physical competencies and risk-taking in a team environment.'
+        whyRecommended: 'Variety keeps engagement high while developing multiple physical competencies and risk-taking in a team environment.',
+        regionalSuitability: {
+          climatePreference: ['tropical', 'subtropical', 'temperate'],
+          requiresCoastal: false
+        }
       });
     }
 
@@ -1002,7 +1062,11 @@ export class ActivityRecommendationService {
       estimatedCostUSD: { min: 60, max: 100 },
       activityType: 'indoor',
       ageAppropriate: true,
-      whyRecommended: 'Directly develops open-minded attribute through joyful, engaging cultural exposure. Leverages existing communication strengths.'
+      whyRecommended: 'Directly develops open-minded attribute through joyful, engaging cultural exposure. Leverages existing communication strengths.',
+      regionalSuitability: {
+        climatePreference: ['tropical', 'subtropical', 'temperate', 'cold', 'arid'],
+        requiresCoastal: false
+      }
     });
 
     activities.push({
@@ -1023,7 +1087,11 @@ export class ActivityRecommendationService {
       estimatedCostUSD: { min: 80, max: 150 },
       activityType: 'indoor',
       ageAppropriate: true,
-      whyRecommended: 'IB values multilingualism highly. Builds on existing language strengths while developing cultural awareness.'
+      whyRecommended: 'IB values multilingualism highly. Builds on existing language strengths while developing cultural awareness.',
+      regionalSuitability: {
+        climatePreference: ['tropical', 'subtropical', 'temperate', 'cold', 'arid'],
+        requiresCoastal: false
+      }
     });
 
     activities.push({
@@ -1044,7 +1112,11 @@ export class ActivityRecommendationService {
       estimatedCostUSD: { min: 60, max: 120 },
       activityType: 'indoor',
       ageAppropriate: true,
-      whyRecommended: 'Combines artistic strength with cultural learning. Develops open-minded perspective through narrative and art.'
+      whyRecommended: 'Combines artistic strength with cultural learning. Develops open-minded perspective through narrative and art.',
+      regionalSuitability: {
+        climatePreference: ['tropical', 'subtropical', 'temperate', 'cold', 'arid'],
+        requiresCoastal: false
+      }
     });
 
     return activities;
@@ -1074,7 +1146,11 @@ export class ActivityRecommendationService {
       estimatedCostUSD: { min: 60, max: 120 },
       activityType: 'indoor',
       ageAppropriate: true,
-      whyRecommended: 'Addresses need for cross-disciplinary knowledge. Develops inquiry skills essential for IB learning.'
+      whyRecommended: 'Addresses need for cross-disciplinary knowledge. Develops inquiry skills essential for IB learning.',
+      regionalSuitability: {
+        climatePreference: ['tropical', 'subtropical', 'temperate', 'cold', 'arid'],
+        requiresCoastal: false
+      }
     });
 
     activities.push({
@@ -1095,7 +1171,11 @@ export class ActivityRecommendationService {
       estimatedCostUSD: { min: 40, max: 80 },
       activityType: 'outdoor',
       ageAppropriate: true,
-      whyRecommended: 'Combines inquiry, knowledge, and caring attributes. Addresses need for engagement with local/global issues.'
+      whyRecommended: 'Combines inquiry, knowledge, and caring attributes. Addresses need for engagement with local/global issues.',
+      regionalSuitability: {
+        climatePreference: ['tropical', 'subtropical', 'temperate'],
+        requiresCoastal: false
+      }
     });
 
     activities.push({
@@ -1116,7 +1196,11 @@ export class ActivityRecommendationService {
       estimatedCostUSD: { min: 60, max: 120 },
       activityType: 'indoor',
       ageAppropriate: true,
-      whyRecommended: 'Develops critical thinking and problem-solving. Natural risk-taking through building and testing.'
+      whyRecommended: 'Develops critical thinking and problem-solving. Natural risk-taking through building and testing.',
+      regionalSuitability: {
+        climatePreference: ['tropical', 'subtropical', 'temperate', 'cold', 'arid'],
+        requiresCoastal: false
+      }
     });
 
     return activities;
@@ -1146,7 +1230,11 @@ export class ActivityRecommendationService {
       estimatedCostUSD: { min: 40, max: 80 },
       activityType: 'both',
       ageAppropriate: true,
-      whyRecommended: 'Directly develops reflective attribute. Can be practiced at home for sustained impact.'
+      whyRecommended: 'Directly develops reflective attribute. Can be practiced at home for sustained impact.',
+      regionalSuitability: {
+        climatePreference: ['tropical', 'subtropical', 'temperate', 'cold', 'arid'],
+        requiresCoastal: false
+      }
     });
 
     activities.push({
@@ -1167,7 +1255,11 @@ export class ActivityRecommendationService {
       estimatedCostUSD: { min: 80, max: 150 },
       activityType: 'indoor',
       ageAppropriate: true,
-      whyRecommended: 'Leverages artistic strength for emotional development. Supports reflective thinking about self.'
+      whyRecommended: 'Leverages artistic strength for emotional development. Supports reflective thinking about self.',
+      regionalSuitability: {
+        climatePreference: ['tropical', 'subtropical', 'temperate', 'cold', 'arid'],
+        requiresCoastal: false
+      }
     });
 
     return activities;
@@ -1198,7 +1290,11 @@ export class ActivityRecommendationService {
       estimatedCostUSD: { min: 0, max: 20 },
       activityType: 'indoor',
       ageAppropriate: true,
-      whyRecommended: 'Reading is fundamental for all learning. Daily practice at home builds strong foundations without needing formal classes.'
+      whyRecommended: 'Reading is fundamental for all learning. Daily practice at home builds strong foundations without needing formal classes.',
+      regionalSuitability: {
+        climatePreference: ['tropical', 'subtropical', 'temperate', 'cold', 'arid'],
+        requiresCoastal: false
+      }
     });
 
     activities.push({
@@ -1220,7 +1316,11 @@ export class ActivityRecommendationService {
       estimatedCostUSD: { min: 0, max: 15 },
       activityType: 'indoor',
       ageAppropriate: true,
-      whyRecommended: 'Develops scientific thinking through play. Parents can easily guide these activities using online resources.'
+      whyRecommended: 'Develops scientific thinking through play. Parents can easily guide these activities using online resources.',
+      regionalSuitability: {
+        climatePreference: ['tropical', 'subtropical', 'temperate', 'cold', 'arid'],
+        requiresCoastal: false
+      }
     });
 
     activities.push({
@@ -1242,7 +1342,11 @@ export class ActivityRecommendationService {
       estimatedCostUSD: { min: 10, max: 30 },
       activityType: 'indoor',
       ageAppropriate: true,
-      whyRecommended: 'Art provides emotional expression and builds creativity. No formal instruction needed - let the child explore freely.'
+      whyRecommended: 'Art provides emotional expression and builds creativity. No formal instruction needed - let the child explore freely.',
+      regionalSuitability: {
+        climatePreference: ['tropical', 'subtropical', 'temperate', 'cold', 'arid'],
+        requiresCoastal: false
+      }
     });
 
     if (age >= 4) {
@@ -1265,7 +1369,11 @@ export class ActivityRecommendationService {
         estimatedCostUSD: { min: 0, max: 0 },
         activityType: 'outdoor',
         ageAppropriate: true,
-        whyRecommended: 'Free play is essential for holistic development. Children learn social skills, physical coordination, and independence through play.'
+        whyRecommended: 'Free play is essential for holistic development. Children learn social skills, physical coordination, and independence through play.',
+        regionalSuitability: {
+          climatePreference: ['tropical', 'subtropical', 'temperate'],
+          requiresCoastal: false
+        }
       });
     }
 
@@ -1288,7 +1396,11 @@ export class ActivityRecommendationService {
       estimatedCostUSD: { min: 0, max: 0 },
       activityType: 'both',
       ageAppropriate: true,
-      whyRecommended: 'Involving children in family life builds character, responsibility, and practical skills that formal classes cannot teach.'
+      whyRecommended: 'Involving children in family life builds character, responsibility, and practical skills that formal classes cannot teach.',
+      regionalSuitability: {
+        climatePreference: ['tropical', 'subtropical', 'temperate', 'cold', 'arid'],
+        requiresCoastal: false
+      }
     });
 
     activities.push({
@@ -1310,7 +1422,11 @@ export class ActivityRecommendationService {
       estimatedCostUSD: { min: 0, max: 10 },
       activityType: 'indoor',
       ageAppropriate: true,
-      whyRecommended: 'Music and movement are naturally engaging. Exposure to diverse music builds cultural awareness without formal lessons.'
+      whyRecommended: 'Music and movement are naturally engaging. Exposure to diverse music builds cultural awareness without formal lessons.',
+      regionalSuitability: {
+        climatePreference: ['tropical', 'subtropical', 'temperate', 'cold', 'arid'],
+        requiresCoastal: false
+      }
     });
 
     return activities;
@@ -1343,11 +1459,72 @@ export class ActivityRecommendationService {
         estimatedCostUSD: { min: 60, max: 120 },
         activityType: 'indoor',
         ageAppropriate: true,
-        whyRecommended: 'Builds on existing communication excellence while developing risk-taking and open-mindedness.'
+        whyRecommended: 'Builds on existing communication excellence while developing risk-taking and open-mindedness.',
+        regionalSuitability: {
+          climatePreference: ['tropical', 'subtropical', 'temperate', 'cold', 'arid'],
+          requiresCoastal: false
+        }
       });
     }
 
     return activities;
+  }
+
+  /**
+   * Calculate feasibility score for an activity based on budget and climate constraints
+   */
+  private calculateFeasibilityScore(
+    activity: ActivityRecommendation,
+    context: {
+      budget?: number;
+      budgetFlexibility?: string;
+      climateZone?: string;
+      isCoastal?: boolean;
+    }
+  ): { budgetMatch: number; climateMatch: number; overall: number } {
+    // 1. Budget Match (0-100)
+    let budgetMatch = 100;
+    if (context.budget) {
+      const avgCost = (activity.estimatedCostUSD.min + activity.estimatedCostUSD.max) / 2;
+
+      if (avgCost <= context.budget) {
+        budgetMatch = 100; // Within budget
+      } else {
+        const overage = avgCost - context.budget;
+        const overagePercent = overage / context.budget;
+
+        // Apply penalty based on flexibility
+        if (context.budgetFlexibility === 'strict') {
+          budgetMatch = Math.max(0, 100 - overagePercent * 200); // Heavy penalty
+        } else if (context.budgetFlexibility === 'moderate') {
+          budgetMatch = Math.max(20, 100 - overagePercent * 100); // Moderate penalty
+        } else {
+          // flexible
+          budgetMatch = Math.max(50, 100 - overagePercent * 50); // Light penalty
+        }
+      }
+    }
+
+    // 2. Climate Match (0-100)
+    let climateMatch = 100;
+    if (context.climateZone && activity.regionalSuitability) {
+      const { climatePreference, requiresCoastal } = activity.regionalSuitability;
+
+      // Check climate preference
+      if (climatePreference && !climatePreference.includes(context.climateZone as any)) {
+        climateMatch = 40; // Penalize but don't eliminate
+      }
+
+      // Check coastal requirement
+      if (requiresCoastal && !context.isCoastal) {
+        climateMatch = 20; // Heavy penalty for coastal activities inland
+      }
+    }
+
+    // Overall score (average)
+    const overall = (budgetMatch + climateMatch) / 2;
+
+    return { budgetMatch, climateMatch, overall };
   }
 
   /**

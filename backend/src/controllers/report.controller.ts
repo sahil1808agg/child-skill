@@ -7,6 +7,7 @@ import unifiedAnalysisService from '../services/unified-analysis.service'
 import summarizationService from '../services/summarization.service'
 import activityRecommendationService from '../services/activity-recommendation.service'
 import pdfGeneratorService from '../services/pdf-generator.service'
+import climateDetectionService from '../services/climate-detection.service'
 
 export const uploadReport = async (req: Request, res: Response) => {
   try {
@@ -154,9 +155,13 @@ export const getActivityRecommendations = async (req: Request, res: Response) =>
   try {
     const reportId = req.params.id
 
-    // Get location from query parameters
+    // Get location and budget from query parameters
     // Can be: ?lat=28.6139&lng=77.2090 or ?address=Delhi or ?city=Delhi
-    const { lat, lng, latitude, longitude, address, city, currentActivities } = req.query
+    const {
+      lat, lng, latitude, longitude, address, city, currentActivities,
+      budget, // Monthly budget in USD
+      budgetFlexibility // 'strict' | 'moderate' | 'flexible'
+    } = req.query
 
     // Find the report
     const report = await Report.findById(reportId)
@@ -165,8 +170,80 @@ export const getActivityRecommendations = async (req: Request, res: Response) =>
       return res.status(404).json({ error: 'Report not found' })
     }
 
-    // Generate activity recommendations
-    let recommendations = activityRecommendationService.generateRecommendations(report)
+    // Find the student to get preferences
+    const student = await Student.findById(report.studentId)
+    if (!student) {
+      return res.status(404).json({ error: 'Student not found' })
+    }
+
+    // Determine location and climate zone
+    let location: { latitude: number; longitude: number } | null = null
+    let climateZone: string | undefined = student.location?.climateZone
+    let isCoastal = false
+
+    if (lat && lng) {
+      // Direct lat/lng provided
+      location = {
+        latitude: parseFloat(lat as string),
+        longitude: parseFloat(lng as string)
+      }
+    } else if (latitude && longitude) {
+      // Alternative parameter names
+      location = {
+        latitude: parseFloat(latitude as string),
+        longitude: parseFloat(longitude as string)
+      }
+    } else if (address || city) {
+      // Geocode address/city
+      const venueSearchService = require('../services/venue-search.service').default
+      const searchAddress = (address || city) as string
+      console.log(`Geocoding address: ${searchAddress}`)
+      location = await venueSearchService.geocodeLocation(searchAddress)
+
+      if (!location) {
+        console.warn(`Could not geocode address: ${searchAddress}`)
+      }
+    } else if (student.location?.latitude && student.location?.longitude) {
+      // Use student's stored location if available
+      location = {
+        latitude: student.location.latitude,
+        longitude: student.location.longitude
+      }
+    }
+
+    // Detect climate zone if location provided and not already stored
+    if (location && !climateZone) {
+      climateZone = climateDetectionService.detectClimateZone(
+        location.latitude,
+        location.longitude
+      )
+
+      // Check if coastal
+      isCoastal = climateDetectionService.isCoastalRegion(
+        location.latitude,
+        location.longitude
+      )
+
+      console.log(`Detected climate zone: ${climateZone}, coastal: ${isCoastal}`)
+    }
+
+    // Merge budget from query params or student profile
+    const finalBudget = budget
+      ? parseFloat(budget as string)
+      : student.preferences?.monthlyBudgetUSD
+
+    const finalFlexibility = (budgetFlexibility as any) || student.preferences?.budgetFlexibility
+
+    // Generate activity recommendations with feasibility options
+    let recommendations = activityRecommendationService.generateRecommendations(
+      report,
+      {
+        budget: finalBudget,
+        budgetFlexibility: finalFlexibility,
+        climateZone,
+        isCoastal
+      }
+    )
 
     // Evaluate current activities if provided
     let currentActivityEvaluations = null;
@@ -179,33 +256,6 @@ export const getActivityRecommendations = async (req: Request, res: Response) =>
         report,
         activitiesList as string[]
       );
-    }
-
-    // If location provided, enrich with venues
-    let location: { latitude: number; longitude: number } | null = null;
-
-    if (lat && lng) {
-      // Direct lat/lng provided
-      location = {
-        latitude: parseFloat(lat as string),
-        longitude: parseFloat(lng as string)
-      };
-    } else if (latitude && longitude) {
-      // Alternative parameter names
-      location = {
-        latitude: parseFloat(latitude as string),
-        longitude: parseFloat(longitude as string)
-      };
-    } else if (address || city) {
-      // Geocode address/city
-      const venueSearchService = require('../services/venue-search.service').default;
-      const searchAddress = (address || city) as string;
-      console.log(`Geocoding address: ${searchAddress}`);
-      location = await venueSearchService.geocodeLocation(searchAddress);
-
-      if (!location) {
-        console.warn(`Could not geocode address: ${searchAddress}`);
-      }
     }
 
     // Enrich with venues if location is available
@@ -223,7 +273,8 @@ export const getActivityRecommendations = async (req: Request, res: Response) =>
       reportId,
       location: location ? {
         latitude: location.latitude,
-        longitude: location.longitude
+        longitude: location.longitude,
+        climateZone
       } : null,
       recommendations,
       currentActivityEvaluations

@@ -27,13 +27,14 @@ export const getStudentById = async (req: Request, res: Response) => {
 
 export const createStudent = async (req: Request, res: Response) => {
   try {
-    const { name, dateOfBirth, grade, location } = req.body
+    const { name, dateOfBirth, grade, location, preferences } = req.body
 
     const student = new Student({
       name,
       dateOfBirth,
       grade,
-      location
+      location,
+      preferences
     })
 
     await student.save()
@@ -45,13 +46,14 @@ export const createStudent = async (req: Request, res: Response) => {
 
 export const updateStudent = async (req: Request, res: Response) => {
   try {
-    const { name, dateOfBirth, grade, location } = req.body
+    const { name, dateOfBirth, grade, location, preferences } = req.body
 
     const updateData: any = {}
     if (name !== undefined) updateData.name = name
     if (dateOfBirth !== undefined) updateData.dateOfBirth = dateOfBirth
     if (grade !== undefined) updateData.grade = grade
     if (location !== undefined) updateData.location = location
+    if (preferences !== undefined) updateData.preferences = preferences
 
     const student = await Student.findByIdAndUpdate(
       req.params.id,
@@ -66,6 +68,35 @@ export const updateStudent = async (req: Request, res: Response) => {
     res.json(student)
   } catch (error) {
     res.status(500).json({ error: 'Failed to update student' })
+  }
+}
+
+export const updateStudentPreferences = async (req: Request, res: Response) => {
+  try {
+    const { monthlyBudgetUSD, budgetFlexibility } = req.body
+
+    const updateData: any = {}
+    if (monthlyBudgetUSD !== undefined) {
+      updateData['preferences.monthlyBudgetUSD'] = monthlyBudgetUSD
+    }
+    if (budgetFlexibility !== undefined) {
+      updateData['preferences.budgetFlexibility'] = budgetFlexibility
+    }
+
+    const student = await Student.findByIdAndUpdate(
+      req.params.id,
+      updateData,
+      { new: true, runValidators: true }
+    )
+
+    if (!student) {
+      return res.status(404).json({ error: 'Student not found' })
+    }
+
+    res.json(student)
+  } catch (error) {
+    console.error('Error updating student preferences:', error)
+    res.status(500).json({ error: 'Failed to update preferences' })
   }
 }
 
