@@ -36,6 +36,22 @@ export interface CurrentActivityEvaluation {
   alternatives?: string[]; // Suggested alternatives if stop/reconsider
 }
 
+export interface ParentAction {
+  category: 'improvement' | 'strength-maintenance';
+  targetArea: string; // e.g., "Writing Skills", "Reading Comprehension"
+  priority: 'HIGH' | 'MEDIUM' | 'LOW';
+  title: string;
+  description: string;
+  activities: Array<{
+    activity: string;
+    frequency: string;
+    duration: string;
+    tips: string[];
+  }>;
+  expectedOutcome: string;
+  timeToSeeResults: string;
+}
+
 export class ActivityRecommendationService {
   /**
    * Generate personalized activity recommendations based on report analysis
@@ -338,6 +354,665 @@ export class ActivityRecommendationService {
     });
 
     return evaluations;
+  }
+
+  /**
+   * Generate personalized "Actions for Parents" - home-based activities
+   * parents can do with their child based on strengths and areas of improvement
+   */
+  generateParentActions(report: any): ParentAction[] {
+    const analysis = this.analyzeReportForRecommendations(report);
+    const age = this.estimateAge(report.grade);
+    const actions: ParentAction[] = [];
+
+    console.log('Generating parent actions for improvement and strength maintenance');
+
+    // Generate actions for areas of improvement (prioritize top 3 weak areas)
+    const topWeakAreas = analysis.weakAttributes.slice(0, 3);
+
+    for (const weakArea of topWeakAreas) {
+      const action = this.getImprovementAction(weakArea, age, report);
+      if (action) {
+        actions.push(action);
+      }
+    }
+
+    // Generate actions to maintain strengths (top 2 strong areas)
+    const topStrongAreas = analysis.strongAttributes.slice(0, 2);
+
+    for (const strongArea of topStrongAreas) {
+      const action = this.getStrengthMaintenanceAction(strongArea, age, report);
+      if (action) {
+        actions.push(action);
+      }
+    }
+
+    // Add general foundational activities based on age
+    const foundationalAction = this.getFoundationalAction(age, analysis);
+    if (foundationalAction) {
+      actions.push(foundationalAction);
+    }
+
+    // Sort by priority (HIGH > MEDIUM > LOW)
+    actions.sort((a, b) => {
+      const priorityOrder = { HIGH: 3, MEDIUM: 2, LOW: 1 };
+      return priorityOrder[b.priority] - priorityOrder[a.priority];
+    });
+
+    return actions;
+  }
+
+  /**
+   * Get improvement action for a specific weak attribute
+   */
+  private getImprovementAction(attribute: string, age: number, report: any): ParentAction | null {
+    const actionMap: { [key: string]: () => ParentAction } = {
+      'Communicator': () => ({
+        category: 'improvement',
+        targetArea: 'Communication Skills',
+        priority: 'HIGH',
+        title: 'Build Communication & Expression',
+        description: 'Help your child express thoughts clearly and confidently through daily conversations and storytelling.',
+        activities: [
+          {
+            activity: 'Daily Story Time Discussion',
+            frequency: 'Every day',
+            duration: '15-20 minutes',
+            tips: [
+              'Ask open-ended questions: "What do you think happened next?" or "How did that make you feel?"',
+              'Encourage detailed descriptions: "Tell me more about..."',
+              'Practice active listening - make eye contact and respond thoughtfully',
+              'Let them retell their day at dinner time'
+            ]
+          },
+          {
+            activity: 'Show and Tell Practice',
+            frequency: '2-3 times per week',
+            duration: '10-15 minutes',
+            tips: [
+              'Have them choose a toy or object and describe it to family members',
+              'Practice speaking clearly and in complete sentences',
+              'Encourage them to explain "why" they chose that item',
+              'Praise specific efforts: "I loved how you explained that!"'
+            ]
+          },
+          {
+            activity: 'Family Conversation Time',
+            frequency: 'Daily at meals',
+            duration: '15-30 minutes',
+            tips: [
+              'Turn off TV/devices during meals',
+              'Ask about their opinions on age-appropriate topics',
+              'Model good communication by sharing your own day',
+              'Practice turn-taking in conversations'
+            ]
+          }
+        ],
+        expectedOutcome: 'Improved ability to express thoughts clearly, increased confidence in speaking, better vocabulary and sentence structure.',
+        timeToSeeResults: '4-6 weeks of consistent practice'
+      }),
+
+      'Inquirer': () => ({
+        category: 'improvement',
+        targetArea: 'Curiosity & Questioning Skills',
+        priority: 'HIGH',
+        title: 'Foster Natural Curiosity',
+        description: 'Encourage questioning, exploration, and discovery through everyday experiences.',
+        activities: [
+          {
+            activity: 'Wonder Questions',
+            frequency: 'Daily',
+            duration: '10-15 minutes',
+            tips: [
+              'Start questions with "I wonder..." and explore answers together',
+              'Examples: "I wonder why the sky is blue?" "I wonder how birds fly?"',
+              'Look up answers together in books or online (age-appropriate sources)',
+              'Encourage them to ask their own "I wonder" questions'
+            ]
+          },
+          {
+            activity: 'Nature Observation',
+            frequency: '2-3 times per week',
+            duration: '20-30 minutes',
+            tips: [
+              'Go on backyard or neighborhood "discovery walks"',
+              'Observe insects, plants, clouds, or seasonal changes',
+              'Ask: "What do you notice?" "What\'s different from yesterday?"',
+              'Keep a simple nature journal with drawings and observations'
+            ]
+          },
+          {
+            activity: 'Kitchen Science Experiments',
+            frequency: 'Once a week',
+            duration: '30 minutes',
+            tips: [
+              'Simple experiments: mixing baking soda and vinegar, making slime, floating vs sinking objects',
+              'Ask predictions: "What do you think will happen?"',
+              'Discuss results: "Why did that happen?"',
+              'Let them lead the experimentation'
+            ]
+          }
+        ],
+        expectedOutcome: 'Increased curiosity, more frequent questioning, better observation skills, and natural desire to learn.',
+        timeToSeeResults: '3-5 weeks'
+      }),
+
+      'Knowledgeable': () => ({
+        category: 'improvement',
+        targetArea: 'Knowledge Building',
+        priority: 'HIGH',
+        title: 'Expand Knowledge & Understanding',
+        description: 'Build a broad knowledge base through reading, conversations, and exploration of diverse topics.',
+        activities: [
+          {
+            activity: 'Daily Reading Together',
+            frequency: 'Every day',
+            duration: '20-30 minutes',
+            tips: [
+              'Read age-appropriate books on various topics (animals, space, cultures, history)',
+              'Visit library weekly and let child choose books',
+              'Discuss what you read: "What did you learn today?"',
+              'Connect books to real life: "Remember when we saw..."'
+            ]
+          },
+          {
+            activity: 'Educational Videos & Discussions',
+            frequency: '3-4 times per week',
+            duration: '15-20 minutes',
+            tips: [
+              'Watch age-appropriate educational content (nature documentaries, how things work)',
+              'Discuss afterward: "What was the most interesting part?"',
+              'Follow up with related books or activities',
+              'Limit screen time but make it educational'
+            ]
+          },
+          {
+            activity: 'Topic of the Week',
+            frequency: 'Weekly theme',
+            duration: 'Ongoing',
+            tips: [
+              'Choose a topic together (e.g., dinosaurs, ocean, space)',
+              'Find 3-4 books, videos, or activities about that topic',
+              'Visit related places if possible (museum, aquarium, planetarium)',
+              'Let child become the "expert" and teach others'
+            ]
+          }
+        ],
+        expectedOutcome: 'Broader general knowledge, better retention of information, increased vocabulary, and confidence in discussions.',
+        timeToSeeResults: '6-8 weeks'
+      }),
+
+      'Thinker': () => ({
+        category: 'improvement',
+        targetArea: 'Critical Thinking & Problem Solving',
+        priority: 'HIGH',
+        title: 'Develop Problem-Solving Skills',
+        description: 'Strengthen critical thinking through puzzles, open-ended questions, and real-world problem solving.',
+        activities: [
+          {
+            activity: 'Puzzle Time',
+            frequency: '4-5 times per week',
+            duration: '15-20 minutes',
+            tips: [
+              'Age-appropriate jigsaw puzzles, logic puzzles, or mazes',
+              'Start with easier puzzles and gradually increase difficulty',
+              'Encourage persistence: "What could you try next?"',
+              'Celebrate effort, not just completion'
+            ]
+          },
+          {
+            activity: 'Problem-Solving Discussions',
+            frequency: 'Daily opportunities',
+            duration: '5-10 minutes',
+            tips: [
+              'When problems arise, ask: "What could we do to solve this?"',
+              'Brainstorm multiple solutions together',
+              'Let them choose a solution and try it',
+              'Reflect afterward: "Did it work? What would you do differently?"'
+            ]
+          },
+          {
+            activity: 'Building & Construction Play',
+            frequency: '3-4 times per week',
+            duration: '30-45 minutes',
+            tips: [
+              'Provide blocks, LEGO, cardboard boxes, or craft materials',
+              'Set challenges: "Can you build a bridge?" "Make a house for this toy"',
+              'Encourage planning: "What will you build? How?"',
+              'Let them experiment and fail - it\'s part of learning'
+            ]
+          }
+        ],
+        expectedOutcome: 'Better problem-solving skills, increased persistence, logical thinking development, and creative solution-finding.',
+        timeToSeeResults: '5-7 weeks'
+      }),
+
+      'Risk-taker': () => ({
+        category: 'improvement',
+        targetArea: 'Confidence & Risk-Taking',
+        priority: 'HIGH',
+        title: 'Build Confidence Through Safe Challenges',
+        description: 'Help your child develop confidence by encouraging calculated risks and celebrating efforts.',
+        activities: [
+          {
+            activity: 'Try Something New',
+            frequency: 'Weekly',
+            duration: 'Varies',
+            tips: [
+              'Each week, try one new thing together (new food, new route, new game)',
+              'Model trying new things yourself',
+              'Emphasize it\'s okay if they don\'t like it - trying is what matters',
+              'Celebrate the courage to try: "You were so brave to try that!"'
+            ]
+          },
+          {
+            activity: 'Physical Challenges at Home',
+            frequency: '3-4 times per week',
+            duration: '20-30 minutes',
+            tips: [
+              'Set up safe obstacle courses with pillows, cushions, tape lines',
+              'Encourage trying slightly challenging physical activities',
+              'Provide spotting/support but let them do it themselves',
+              'Focus on effort: "You tried even though it was hard!"'
+            ]
+          },
+          {
+            activity: 'Mistake Celebration',
+            frequency: 'Ongoing mindset',
+            duration: 'Daily moments',
+            tips: [
+              'When they make a mistake, say: "Great! What can we learn?"',
+              'Share your own mistakes and what you learned',
+              'Read books about famous people who failed before succeeding',
+              'Create a "Mistakes Help Us Grow" chart'
+            ]
+          }
+        ],
+        expectedOutcome: 'Increased willingness to try new things, reduced fear of failure, better resilience, and growing independence.',
+        timeToSeeResults: '6-8 weeks'
+      }),
+
+      'Balanced': () => ({
+        category: 'improvement',
+        targetArea: 'Balance & Well-being',
+        priority: 'MEDIUM',
+        title: 'Promote Healthy Balance',
+        description: 'Help your child develop physical, emotional, and mental balance through varied activities and self-awareness.',
+        activities: [
+          {
+            activity: 'Daily Movement Time',
+            frequency: 'Every day',
+            duration: '30-60 minutes',
+            tips: [
+              'Mix of active play (running, jumping, dancing) and calm activities',
+              'Get outside whenever possible',
+              'Practice balance activities: walking on lines, yoga poses, standing on one foot',
+              'Make it fun, not forced'
+            ]
+          },
+          {
+            activity: 'Mindful Moments',
+            frequency: 'Daily',
+            duration: '5-10 minutes',
+            tips: [
+              'Practice deep breathing together before bed',
+              'Body awareness: "How does your body feel right now?"',
+              'Gratitude practice: Share 3 things you\'re grateful for',
+              'Use calming activities when needed (drawing, quiet music)'
+            ]
+          },
+          {
+            activity: 'Routine & Rest',
+            frequency: 'Daily structure',
+            duration: 'Consistent schedule',
+            tips: [
+              'Maintain consistent sleep schedule (age-appropriate bedtime)',
+              'Balance active time with quiet time',
+              'Create predictable routines for mornings and evenings',
+              'Teach the importance of rest and recovery'
+            ]
+          }
+        ],
+        expectedOutcome: 'Better physical coordination, improved emotional regulation, healthier habits, and overall well-being.',
+        timeToSeeResults: '4-6 weeks'
+      }),
+
+      'Reflective': () => ({
+        category: 'improvement',
+        targetArea: 'Self-Reflection & Awareness',
+        priority: 'MEDIUM',
+        title: 'Encourage Thoughtful Reflection',
+        description: 'Develop your child\'s ability to think about their own learning, feelings, and experiences.',
+        activities: [
+          {
+            activity: 'Daily Reflection Time',
+            frequency: 'Every evening',
+            duration: '10-15 minutes',
+            tips: [
+              'Ask: "What made you happy today?" "What was challenging?"',
+              'Discuss: "What did you learn today?"',
+              'Reflect on emotions: "How did you feel when that happened?"',
+              'Keep it light and conversational, not like an interview'
+            ]
+          },
+          {
+            activity: 'Feeling Check-ins',
+            frequency: 'Multiple times daily',
+            duration: '2-3 minutes',
+            tips: [
+              'Use feelings chart or emotions wheel',
+              'Ask: "How are you feeling right now?"',
+              'Validate feelings: "It\'s okay to feel..."',
+              'Help name complex emotions'
+            ]
+          },
+          {
+            activity: 'Journal or Drawing Time',
+            frequency: '3-4 times per week',
+            duration: '15-20 minutes',
+            tips: [
+              'Let them draw or write about their day (age-appropriate)',
+              'No pressure - it\'s their space to express',
+              'Younger kids can draw and narrate while you write',
+              'Review together if they want to share'
+            ]
+          }
+        ],
+        expectedOutcome: 'Better self-awareness, improved emotional intelligence, stronger ability to think about thinking (metacognition).',
+        timeToSeeResults: '5-7 weeks'
+      }),
+
+      'Caring': () => ({
+        category: 'improvement',
+        targetArea: 'Empathy & Compassion',
+        priority: 'MEDIUM',
+        title: 'Nurture Empathy & Kindness',
+        description: 'Develop compassion and caring through modeling, discussion, and acts of kindness.',
+        activities: [
+          {
+            activity: 'Acts of Kindness',
+            frequency: 'Daily opportunities',
+            duration: '5-10 minutes',
+            tips: [
+              'Look for chances to help others (holding doors, helping siblings)',
+              'Practice at home: set table, help with chores, comfort sad family member',
+              'Point out when they\'re being kind: "That was thoughtful!"',
+              'Discuss how kindness makes people feel'
+            ]
+          },
+          {
+            activity: 'Empathy Discussions',
+            frequency: 'Daily moments',
+            duration: '5 minutes',
+            tips: [
+              'When reading stories, ask: "How do you think they felt?"',
+              'Observe others: "Look at that person\'s face - what might they be feeling?"',
+              'Relate to their experiences: "Remember when you felt sad like that?"',
+              'Model empathy in your own reactions'
+            ]
+          },
+          {
+            activity: 'Care for Living Things',
+            frequency: 'Daily',
+            duration: '10-15 minutes',
+            tips: [
+              'Water plants together, feed pets, care for garden',
+              'Discuss needs: "What does this plant need to grow?"',
+              'Teach responsibility and nurturing',
+              'Celebrate when things thrive under their care'
+            ]
+          }
+        ],
+        expectedOutcome: 'Increased empathy, more frequent acts of kindness, better understanding of others\' feelings, and compassionate behavior.',
+        timeToSeeResults: '6-8 weeks'
+      }),
+
+      'Principled': () => ({
+        category: 'improvement',
+        targetArea: 'Integrity & Responsibility',
+        priority: 'MEDIUM',
+        title: 'Build Strong Values',
+        description: 'Help your child understand right from wrong and develop a sense of responsibility.',
+        activities: [
+          {
+            activity: 'Family Values Discussion',
+            frequency: 'Weekly',
+            duration: '10-15 minutes',
+            tips: [
+              'Discuss what\'s important: honesty, fairness, responsibility',
+              'Use real-life examples: "Was that fair? Why or why not?"',
+              'Read stories that explore moral themes',
+              'Let them explain their reasoning'
+            ]
+          },
+          {
+            activity: 'Age-Appropriate Responsibilities',
+            frequency: 'Daily',
+            duration: 'Integrated into routine',
+            tips: [
+              'Assign simple chores (put away toys, set table, feed pet)',
+              'Follow through consistently - responsibilities matter',
+              'Natural consequences when not done: toys not put away stay out of reach',
+              'Praise responsibility: "You remembered without being asked!"'
+            ]
+          },
+          {
+            activity: 'Honesty Practice',
+            frequency: 'Ongoing mindset',
+            duration: 'Daily moments',
+            tips: [
+              'Model honesty in your own behavior',
+              'When they tell truth about mistake: "Thank you for being honest"',
+              'Make it safe to tell the truth - don\'t punish honesty',
+              'Discuss why honesty matters'
+            ]
+          }
+        ],
+        expectedOutcome: 'Stronger sense of right and wrong, increased responsibility, better integrity, and trustworthy behavior.',
+        timeToSeeResults: '8-10 weeks (values take time)'
+      }),
+
+      'Open-minded': () => ({
+        category: 'improvement',
+        targetArea: 'Open-mindedness & Perspective-Taking',
+        priority: 'MEDIUM',
+        title: 'Expand Perspectives',
+        description: 'Help your child appreciate different viewpoints, cultures, and ways of thinking.',
+        activities: [
+          {
+            activity: 'Cultural Exploration',
+            frequency: '2-3 times per week',
+            duration: '20-30 minutes',
+            tips: [
+              'Read books about different cultures and traditions',
+              'Try foods from different countries',
+              'Listen to music from around the world',
+              'Celebrate different holidays (learn about them)'
+            ]
+          },
+          {
+            activity: 'Different Perspectives',
+            frequency: 'Daily opportunities',
+            duration: '5-10 minutes',
+            tips: [
+              'When disagreements happen: "Let\'s hear both sides"',
+              'Ask: "How might they see it differently?"',
+              'Role-play different viewpoints',
+              'Model changing your mind: "You\'re right, I didn\'t think of it that way"'
+            ]
+          },
+          {
+            activity: 'Try New Things Together',
+            frequency: 'Weekly',
+            duration: 'Varies',
+            tips: [
+              'New foods, new routes, new activities, new games',
+              'Model openness: "Let\'s try it and see what happens"',
+              'Discuss what you liked or didn\'t like',
+              'Emphasize learning from new experiences'
+            ]
+          }
+        ],
+        expectedOutcome: 'Greater appreciation for diversity, willingness to try new things, better ability to see multiple perspectives.',
+        timeToSeeResults: '6-8 weeks'
+      })
+    };
+
+    return actionMap[attribute] ? actionMap[attribute]() : null;
+  }
+
+  /**
+   * Get action to maintain and celebrate a strength
+   */
+  private getStrengthMaintenanceAction(attribute: string, age: number, report: any): ParentAction | null {
+    // Simplified strength maintenance - just acknowledge and encourage continued practice
+    const attributeDescriptions: { [key: string]: string } = {
+      'Communicator': 'communication and expression',
+      'Inquirer': 'curiosity and questioning',
+      'Knowledgeable': 'knowledge and learning',
+      'Thinker': 'critical thinking',
+      'Risk-taker': 'confidence and courage',
+      'Balanced': 'balance and well-being',
+      'Reflective': 'self-reflection',
+      'Caring': 'empathy and kindness',
+      'Principled': 'integrity and responsibility',
+      'Open-minded': 'open-mindedness'
+    };
+
+    if (!attributeDescriptions[attribute]) return null;
+
+    return {
+      category: 'strength-maintenance',
+      targetArea: attributeDescriptions[attribute],
+      priority: 'LOW',
+      title: `Celebrate & Maintain: ${attribute}`,
+      description: `Your child shows strength in ${attributeDescriptions[attribute]}. Continue to nurture this through encouragement and opportunities.`,
+      activities: [
+        {
+          activity: 'Recognize and Praise',
+          frequency: 'When you notice it',
+          duration: '1-2 minutes',
+          tips: [
+            `Point out when they demonstrate ${attribute} qualities`,
+            'Be specific: "I noticed how you..." instead of generic praise',
+            'Let them know you value this strength',
+            'Share examples with other family members'
+          ]
+        },
+        {
+          activity: 'Provide Opportunities',
+          frequency: 'Regularly',
+          duration: 'Varies',
+          tips: [
+            `Create situations where they can use their ${attribute} strength`,
+            'Let them lead in areas where they excel',
+            'Challenge them to grow even stronger',
+            'Connect this strength to other learning areas'
+          ]
+        }
+      ],
+      expectedOutcome: `Continued growth in ${attributeDescriptions[attribute]}, increased confidence in this area.`,
+      timeToSeeResults: 'Ongoing maintenance'
+    };
+  }
+
+  /**
+   * Get foundational action based on age
+   */
+  private getFoundationalAction(age: number, analysis: any): ParentAction | null {
+    if (age <= 5) {
+      return {
+        category: 'improvement',
+        targetArea: 'Early Literacy & Numeracy',
+        priority: 'HIGH',
+        title: 'Build Strong Foundations',
+        description: 'Essential early literacy and numeracy activities for lifelong learning success.',
+        activities: [
+          {
+            activity: 'Daily Reading Together',
+            frequency: 'Every day',
+            duration: '20-30 minutes',
+            tips: [
+              'Read a variety of books - stories, rhymes, picture books',
+              'Point to words as you read',
+              'Ask questions about the story',
+              'Let them "read" to you by describing pictures'
+            ]
+          },
+          {
+            activity: 'Letter & Number Recognition',
+            frequency: '3-4 times per week',
+            duration: '10-15 minutes',
+            tips: [
+              'Point out letters in environment (signs, labels)',
+              'Practice writing name',
+              'Count everyday objects (toys, stairs, snacks)',
+              'Sing alphabet and number songs'
+            ]
+          },
+          {
+            activity: 'Fine Motor Practice',
+            frequency: 'Daily',
+            duration: '15-20 minutes',
+            tips: [
+              'Drawing, coloring, tracing',
+              'Playdough, beads, building blocks',
+              'Cutting with safety scissors',
+              'These skills support writing readiness'
+            ]
+          }
+        ],
+        expectedOutcome: 'Strong pre-reading and pre-math skills, better fine motor control, school readiness.',
+        timeToSeeResults: '6-8 weeks'
+      };
+    } else if (age <= 10) {
+      return {
+        category: 'improvement',
+        targetArea: 'Reading & Writing Skills',
+        priority: 'HIGH',
+        title: 'Strengthen Core Literacy',
+        description: 'Build strong reading and writing habits for academic success.',
+        activities: [
+          {
+            activity: 'Independent Reading Time',
+            frequency: 'Every day',
+            duration: '20-30 minutes',
+            tips: [
+              'Create a cozy reading spot',
+              'Let them choose books at their level',
+              'Visit library weekly',
+              'Discuss what they\'re reading'
+            ]
+          },
+          {
+            activity: 'Writing Practice',
+            frequency: '4-5 times per week',
+            duration: '15-20 minutes',
+            tips: [
+              'Keep a simple journal or diary',
+              'Write letters to family members',
+              'Create stories or comic books',
+              'Focus on expression, not perfect spelling at first'
+            ]
+          },
+          {
+            activity: 'Word Games & Puzzles',
+            frequency: '3 times per week',
+            duration: '15 minutes',
+            tips: [
+              'Play word games (Scrabble Junior, Boggle, rhyming games)',
+              'Do crossword puzzles together',
+              'Make word searches',
+              'Practice spelling through fun activities'
+            ]
+          }
+        ],
+        expectedOutcome: 'Improved reading fluency, better writing skills, larger vocabulary, and love of reading.',
+        timeToSeeResults: '8-10 weeks'
+      };
+    }
+
+    return null;
   }
 
   /**

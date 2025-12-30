@@ -245,6 +245,9 @@ export const getActivityRecommendations = async (req: Request, res: Response) =>
       }
     )
 
+    // Generate parent actions - home-based activities for parents
+    const parentActions = activityRecommendationService.generateParentActions(report)
+
     // Evaluate current activities if provided
     let currentActivityEvaluations = null;
     if (currentActivities) {
@@ -277,6 +280,7 @@ export const getActivityRecommendations = async (req: Request, res: Response) =>
         climateZone
       } : null,
       recommendations,
+      parentActions,
       currentActivityEvaluations
     })
   } catch (error) {
