@@ -277,7 +277,11 @@ export class VenueSearchService {
       const url = 'https://maps.googleapis.com/maps/api/place/autocomplete/json';
       const params = {
         input: input.trim(),
-        types: '(cities)',
+        // Remove type restriction to allow all place types including:
+        // - Cities and regions
+        // - Specific addresses
+        // - Establishments (buildings, societies, apartments)
+        // - Landmarks
         key: this.googleApiKey
       };
 
