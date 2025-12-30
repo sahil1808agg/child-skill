@@ -1,0 +1,148 @@
+.stepper {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  padding: 2rem 0;
+  margin-bottom: 2rem;
+}
+
+.stepper-item-wrapper {
+  display: flex;
+  align-items: center;
+  flex: 1;
+}
+
+.stepper-item {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 0.5rem;
+  position: relative;
+  transition: all 0.3s ease;
+}
+
+.stepper-item.clickable {
+  cursor: pointer;
+}
+
+.stepper-item.clickable:hover .step-circle {
+  transform: scale(1.1);
+}
+
+.step-circle {
+  width: 40px;
+  height: 40px;
+  border-radius: 50%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-weight: bold;
+  transition: all 0.3s ease;
+  border: 2px solid #ddd;
+  background-color: white;
+}
+
+.stepper-item.completed .step-circle {
+  background-color: #4CAF50;
+  border-color: #4CAF50;
+  color: white;
+}
+
+.stepper-item.current .step-circle {
+  background-color: #2196F3;
+  border-color: #2196F3;
+  color: white;
+  box-shadow: 0 0 0 4px rgba(33, 150, 243, 0.2);
+}
+
+.stepper-item.upcoming .step-circle {
+  background-color: #f5f5f5;
+  border-color: #ddd;
+  color: #999;
+}
+
+.step-label {
+  text-align: center;
+  font-size: 0.875rem;
+  white-space: nowrap;
+  transition: all 0.3s ease;
+}
+
+.stepper-item.completed .step-label {
+  color: #333;
+  font-weight: 500;
+}
+
+.stepper-item.current .step-label {
+  color: #2196F3;
+  font-weight: 600;
+}
+
+.stepper-item.upcoming .step-label {
+  color: #999;
+}
+
+.step-label-short {
+  display: none;
+}
+
+.step-connector {
+  flex: 1;
+  height: 2px;
+  background-color: #ddd;
+  margin: 0 1rem;
+  margin-top: 20px;
+  transition: background-color 0.3s ease;
+}
+
+.step-connector.completed {
+  background-color: #4CAF50;
+}
+
+/* Responsive design */
+@media (max-width: 768px) {
+  .stepper {
+    padding: 1rem 0;
+  }
+
+  .step-circle {
+    width: 32px;
+    height: 32px;
+    font-size: 0.875rem;
+  }
+
+  .step-label-full {
+    display: none;
+  }
+
+  .step-label-short {
+    display: block;
+    font-size: 0.75rem;
+  }
+
+  .step-connector {
+    margin: 0 0.5rem;
+    margin-top: 16px;
+  }
+}
+
+@media (max-width: 480px) {
+  .stepper {
+    padding: 0.5rem 0;
+  }
+
+  .step-circle {
+    width: 28px;
+    height: 28px;
+    font-size: 0.75rem;
+  }
+
+  .step-label {
+    font-size: 0.625rem;
+  }
+
+  .step-connector {
+    margin: 0 0.25rem;
+    margin-top: 14px;
+  }
+}

@@ -8,6 +8,7 @@ import cors from 'cors'
 import mongoose from 'mongoose'
 import studentRoutes from './routes/student.routes'
 import reportRoutes from './routes/report.routes'
+import currentActivityRoutes from './routes/current-activity.routes'
 
 const app = express()
 const PORT = process.env.PORT || 5000
@@ -18,6 +19,7 @@ app.use(express.urlencoded({ extended: true }))
 
 app.use('/api/students', studentRoutes)
 app.use('/api/reports', reportRoutes)
+app.use('/api/current-activities', currentActivityRoutes)
 
 app.get('/api/health', (req, res) => {
   res.json({ status: 'OK', message: 'Server is running' })
