@@ -1,11 +1,13 @@
+import dotenv from 'dotenv'
+
+// Load environment variables FIRST before any other imports
+dotenv.config()
+
 import express from 'express'
 import cors from 'cors'
-import dotenv from 'dotenv'
 import mongoose from 'mongoose'
 import studentRoutes from './routes/student.routes'
 import reportRoutes from './routes/report.routes'
-
-dotenv.config()
 
 const app = express()
 const PORT = process.env.PORT || 5000
@@ -36,3 +38,6 @@ mongoose.connect(MONGODB_URI)
   })
 
 export default app
+
+
+

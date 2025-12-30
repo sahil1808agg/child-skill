@@ -1,7 +1,7 @@
-import { useState, useEffect } from 'react'
+import { useState, useEffect, useRef } from 'react'
 import { useParams } from 'react-router-dom'
 import { Student, Report, Analysis, ActivityRecommendation } from '../types'
-import { fetchStudent, fetchStudentReports, fetchStudentAnalysis, deleteReport, fetchActivityRecommendations } from '../services/api'
+import { fetchStudent, fetchStudentReports, fetchStudentAnalysis, deleteReport, fetchActivityRecommendations, LocationParams, getLocationAutocomplete, LocationSuggestion } from '../services/api'
 import './StudentProfile.css'
 
 export default function StudentProfile() {
@@ -11,12 +11,50 @@ export default function StudentProfile() {
   const [analysis, setAnalysis] = useState<Analysis | null>(null)
   const [recommendations, setRecommendations] = useState<ActivityRecommendation[]>([])
   const [loading, setLoading] = useState(true)
+  const [userLocation, setUserLocation] = useState<LocationParams | null>(null)
+  const [manualLocation, setManualLocation] = useState('')
+  const [locationError, setLocationError] = useState('')
+  const [isLoadingLocation, setIsLoadingLocation] = useState(false)
+  const [suggestions, setSuggestions] = useState<LocationSuggestion[]>([])
+  const [showSuggestions, setShowSuggestions] = useState(false)
+  const [isLoadingSuggestions, setIsLoadingSuggestions] = useState(false)
+  const suggestionsRef = useRef<HTMLDivElement>(null)
 
   useEffect(() => {
     if (id) {
       loadStudentData(id)
     }
   }, [id])
+
+  // Debounced autocomplete
+  useEffect(() => {
+    const timer = setTimeout(async () => {
+      if (manualLocation.trim().length >= 2 && !userLocation) {
+        setIsLoadingSuggestions(true)
+        const results = await getLocationAutocomplete(manualLocation)
+        setSuggestions(results)
+        setShowSuggestions(results.length > 0)
+        setIsLoadingSuggestions(false)
+      } else {
+        setSuggestions([])
+        setShowSuggestions(false)
+      }
+    }, 300) // 300ms debounce
+
+    return () => clearTimeout(timer)
+  }, [manualLocation, userLocation])
+
+  // Close suggestions on click outside
+  useEffect(() => {
+    const handleClickOutside = (event: MouseEvent) => {
+      if (suggestionsRef.current && !suggestionsRef.current.contains(event.target as Node)) {
+        setShowSuggestions(false)
+      }
+    }
+
+    document.addEventListener('mousedown', handleClickOutside)
+    return () => document.removeEventListener('mousedown', handleClickOutside)
+  }, [])
 
   const loadStudentData = async (studentId: string) => {
     try {
@@ -33,17 +71,117 @@ export default function StudentProfile() {
       // Fetch activity recommendations for the latest report
       if (reportsData.length > 0) {
         const latestReport = reportsData[reportsData.length - 1]
-        try {
-          const recommendationsData = await fetchActivityRecommendations(latestReport._id)
-          setRecommendations(recommendationsData)
-        } catch (error) {
-          console.error('Error loading activity recommendations:', error)
-        }
+        await loadRecommendations(latestReport._id)
       }
     } catch (error) {
       console.error('Error loading student data:', error)
     } finally {
       setLoading(false)
+    }
+  }
+
+  const loadRecommendations = async (reportId: string) => {
+    try {
+      const recommendationsData = await fetchActivityRecommendations(reportId, userLocation || undefined)
+      setRecommendations(recommendationsData)
+    } catch (error) {
+      console.error('Error loading activity recommendations:', error)
+    }
+  }
+
+  const handleGetCurrentLocation = () => {
+    if (!navigator.geolocation) {
+      setLocationError('Geolocation is not supported by your browser')
+      return
+    }
+
+    setIsLoadingLocation(true)
+    setLocationError('')
+
+    navigator.geolocation.getCurrentPosition(
+      async (position) => {
+        const location: LocationParams = {
+          lat: position.coords.latitude,
+          lng: position.coords.longitude
+        }
+        setUserLocation(location)
+        setIsLoadingLocation(false)
+
+        // Reload recommendations with location
+        if (reports.length > 0) {
+          const latestReport = reports[reports.length - 1]
+          try {
+            const recommendationsData = await fetchActivityRecommendations(latestReport._id, location)
+            setRecommendations(recommendationsData)
+          } catch (error) {
+            console.error('Error loading recommendations with location:', error)
+          }
+        }
+      },
+      (error) => {
+        setIsLoadingLocation(false)
+        setLocationError('Unable to retrieve your location. Please enter manually.')
+        console.error('Geolocation error:', error)
+      }
+    )
+  }
+
+  const handleManualLocationSubmit = async (e: React.FormEvent) => {
+    e.preventDefault()
+
+    if (!manualLocation.trim()) {
+      setLocationError('Please enter a city or address')
+      return
+    }
+
+    setLocationError('')
+    const location: LocationParams = { city: manualLocation.trim() }
+    setUserLocation(location)
+
+    // Reload recommendations with location
+    if (reports.length > 0) {
+      const latestReport = reports[reports.length - 1]
+      try {
+        const recommendationsData = await fetchActivityRecommendations(latestReport._id, location)
+        setRecommendations(recommendationsData)
+      } catch (error) {
+        console.error('Error loading recommendations with location:', error)
+        setLocationError('Failed to find venues for this location. Please try a different city.')
+      }
+    }
+  }
+
+  const handleClearLocation = async () => {
+    setUserLocation(null)
+    setManualLocation('')
+    setLocationError('')
+
+    // Reload recommendations without location
+    if (reports.length > 0) {
+      const latestReport = reports[reports.length - 1]
+      await loadRecommendations(latestReport._id)
+    }
+  }
+
+  const handleSelectSuggestion = async (suggestion: LocationSuggestion) => {
+    setManualLocation(suggestion.description)
+    setShowSuggestions(false)
+    setSuggestions([])
+    setLocationError('')
+
+    const location: LocationParams = { city: suggestion.description }
+    setUserLocation(location)
+
+    // Reload recommendations with location
+    if (reports.length > 0) {
+      const latestReport = reports[reports.length - 1]
+      try {
+        const recommendationsData = await fetchActivityRecommendations(latestReport._id, location)
+        setRecommendations(recommendationsData)
+      } catch (error) {
+        console.error('Error loading recommendations with location:', error)
+        setLocationError('Failed to find venues for this location. Please try a different city.')
+      }
     }
   }
 
@@ -91,58 +229,179 @@ export default function StudentProfile() {
       </div>
 
       {recommendations.length > 0 && (
-        <div className="recommendations-section">
-          <div className="section-header">
-            <h2>Recommended Activities</h2>
-            <p className="section-subtitle">Based on latest report analysis</p>
-          </div>
-          <div className="recommendations-grid">
-            {recommendations.map((activity) => (
-              <div key={activity.id} className={`activity-card priority-${activity.priority.toLowerCase()}`}>
-                <div className="activity-header">
-                  <h3>{activity.name}</h3>
-                  <span className={`priority-badge ${activity.priority.toLowerCase()}`}>
-                    {activity.priority}
+        <>
+          <div className="location-section">
+            <div className="section-header">
+              <h2>Find Nearby Venues</h2>
+              <p className="section-subtitle">Get personalized venue recommendations based on your location</p>
+            </div>
+
+            <div className="location-controls">
+              {!userLocation ? (
+                <>
+                  <button
+                    className="location-btn primary"
+                    onClick={handleGetCurrentLocation}
+                    disabled={isLoadingLocation}
+                  >
+                    {isLoadingLocation ? 'Getting location...' : '📍 Use My Current Location'}
+                  </button>
+
+                  <div className="location-divider">
+                    <span>or</span>
+                  </div>
+
+                  <form className="manual-location-form" onSubmit={handleManualLocationSubmit}>
+                    <div className="autocomplete-container" ref={suggestionsRef}>
+                      <input
+                        type="text"
+                        placeholder="Enter city or address (e.g., Delhi, Mumbai)"
+                        value={manualLocation}
+                        onChange={(e) => setManualLocation(e.target.value)}
+                        onFocus={() => {
+                          if (suggestions.length > 0) {
+                            setShowSuggestions(true)
+                          }
+                        }}
+                        className="location-input"
+                        autoComplete="off"
+                      />
+                      {isLoadingSuggestions && (
+                        <div className="autocomplete-loading">Searching...</div>
+                      )}
+                      {showSuggestions && suggestions.length > 0 && (
+                        <div className="autocomplete-suggestions">
+                          {suggestions.map((suggestion) => (
+                            <div
+                              key={suggestion.placeId}
+                              className="autocomplete-suggestion"
+                              onClick={() => handleSelectSuggestion(suggestion)}
+                            >
+                              <div className="suggestion-main">{suggestion.mainText}</div>
+                              <div className="suggestion-secondary">{suggestion.secondaryText}</div>
+                            </div>
+                          ))}
+                        </div>
+                      )}
+                    </div>
+                    <button type="submit" className="location-btn secondary">
+                      Find Venues
+                    </button>
+                  </form>
+                </>
+              ) : (
+                <div className="location-active">
+                  <span className="location-status">
+                    ✓ Location set: {userLocation.city || `${userLocation.lat?.toFixed(4)}, ${userLocation.lng?.toFixed(4)}`}
                   </span>
+                  <button className="location-btn clear" onClick={handleClearLocation}>
+                    Clear Location
+                  </button>
                 </div>
-                <div className="activity-category">{activity.category}</div>
-                <p className="activity-description">{activity.description}</p>
+              )}
 
-                <div className="activity-details">
-                  <div className="detail-item">
-                    <strong>Frequency:</strong> {activity.frequency}
-                  </div>
-                  <div className="detail-item">
-                    <strong>Estimated Cost:</strong> {activity.estimatedCost}
-                  </div>
-                </div>
-
-                <div className="activity-benefits">
-                  <strong>Benefits:</strong>
-                  <ul>
-                    {activity.benefits.slice(0, 3).map((benefit, idx) => (
-                      <li key={idx}>{benefit}</li>
-                    ))}
-                  </ul>
-                </div>
-
-                <div className="activity-attributes">
-                  <strong>Target IB Attributes:</strong>
-                  <div className="attributes-list">
-                    {activity.targetAttributes.map((attr, idx) => (
-                      <span key={idx} className="attribute-tag">{attr}</span>
-                    ))}
-                  </div>
-                </div>
-
-                <div className="why-recommended">
-                  <strong>Why recommended:</strong>
-                  <p>{activity.whyRecommended}</p>
-                </div>
-              </div>
-            ))}
+              {locationError && <div className="location-error">{locationError}</div>}
+            </div>
           </div>
-        </div>
+
+          <div className="recommendations-section">
+            <div className="section-header">
+              <h2>Recommended Activities</h2>
+              <p className="section-subtitle">Based on latest report analysis</p>
+            </div>
+            <div className="recommendations-grid">
+              {recommendations.map((activity) => (
+                <div key={activity.id} className={`activity-card priority-${activity.priority.toLowerCase()}`}>
+                  <div className="activity-header">
+                    <h3>{activity.name}</h3>
+                    <span className={`priority-badge ${activity.priority.toLowerCase()}`}>
+                      {activity.priority}
+                    </span>
+                  </div>
+                  <div className="activity-category">{activity.category}</div>
+                  <p className="activity-description">{activity.description}</p>
+
+                  <div className="activity-details">
+                    <div className="detail-item">
+                      <strong>Frequency:</strong> {activity.frequency}
+                    </div>
+                    <div className="detail-item">
+                      <strong>Estimated Cost:</strong> {activity.estimatedCost}
+                    </div>
+                  </div>
+
+                  <div className="activity-benefits">
+                    <strong>Benefits:</strong>
+                    <ul>
+                      {activity.benefits.slice(0, 3).map((benefit, idx) => (
+                        <li key={idx}>{benefit}</li>
+                      ))}
+                    </ul>
+                  </div>
+
+                  <div className="activity-attributes">
+                    <strong>Target IB Attributes:</strong>
+                    <div className="attributes-list">
+                      {activity.targetAttributes.map((attr, idx) => (
+                        <span key={idx} className="attribute-tag">{attr}</span>
+                      ))}
+                    </div>
+                  </div>
+
+                  <div className="why-recommended">
+                    <strong>Why recommended:</strong>
+                    <p>{activity.whyRecommended}</p>
+                  </div>
+
+                  {activity.venues && activity.venues.length > 0 && (
+                    <div className="venues-section">
+                      <strong>Nearby Venues ({activity.venues.length}):</strong>
+                      <div className="venues-list">
+                        {activity.venues.slice(0, 3).map((venue, idx) => (
+                          <div key={venue.placeId} className="venue-card">
+                            <div className="venue-header">
+                              <h4>{venue.name}</h4>
+                              {venue.rating && (
+                                <span className="venue-rating">
+                                  ⭐ {venue.rating.toFixed(1)}
+                                  {venue.totalRatings && ` (${venue.totalRatings})`}
+                                </span>
+                              )}
+                            </div>
+                            <p className="venue-address">{venue.address}</p>
+                            {venue.distance && (
+                              <p className="venue-distance">📍 {venue.distance} away</p>
+                            )}
+                            <div className="venue-actions">
+                              {venue.phone && (
+                                <a href={`tel:${venue.phone}`} className="venue-link">
+                                  📞 Call
+                                </a>
+                              )}
+                              {venue.website && (
+                                <a href={venue.website} target="_blank" rel="noopener noreferrer" className="venue-link">
+                                  🌐 Website
+                                </a>
+                              )}
+                              <a
+                                href={`https://www.google.com/maps/search/?api=1&query=${venue.latitude},${venue.longitude}`}
+                                target="_blank"
+                                rel="noopener noreferrer"
+                                className="venue-link primary"
+                              >
+                                🗺️ Directions
+                              </a>
+                            </div>
+                          </div>
+                        ))}
+                      </div>
+                    </div>
+                  )}
+                </div>
+              ))}
+            </div>
+          </div>
+        </>
       )}
 
       <div className="reports-section">

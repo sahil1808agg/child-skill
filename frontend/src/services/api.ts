@@ -49,9 +49,58 @@ export const deleteReport = async (reportId: string): Promise<{ message: string;
   return response.data
 }
 
-export const fetchActivityRecommendations = async (reportId: string): Promise<ActivityRecommendation[]> => {
-  const response = await api.get(`/reports/${reportId}/recommendations`)
-  return response.data.recommendations
+export interface LocationParams {
+  lat?: number;
+  lng?: number;
+  city?: string;
+  address?: string;
+}
+
+export const fetchActivityRecommendations = async (
+  reportId: string,
+  location?: LocationParams
+): Promise<ActivityRecommendation[]> => {
+  const params = new URLSearchParams();
+
+  if (location) {
+    if (location.lat !== undefined && location.lng !== undefined) {
+      params.append('lat', location.lat.toString());
+      params.append('lng', location.lng.toString());
+    } else if (location.city) {
+      params.append('city', location.city);
+    } else if (location.address) {
+      params.append('address', location.address);
+    }
+  }
+
+  const queryString = params.toString();
+  const url = `/reports/${reportId}/recommendations${queryString ? `?${queryString}` : ''}`;
+
+  const response = await api.get(url);
+  return response.data.recommendations;
+}
+
+export interface LocationSuggestion {
+  placeId: string;
+  description: string;
+  mainText: string;
+  secondaryText: string;
+}
+
+export const getLocationAutocomplete = async (input: string): Promise<LocationSuggestion[]> => {
+  if (!input || input.trim().length < 2) {
+    return [];
+  }
+
+  try {
+    const response = await api.get('/reports/location/autocomplete', {
+      params: { input: input.trim() }
+    });
+    return response.data.suggestions || [];
+  } catch (error) {
+    console.error('Error fetching location autocomplete:', error);
+    return [];
+  }
 }
 
 export default api

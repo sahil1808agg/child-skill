@@ -1,3 +1,5 @@
+import venueSearchService, { Venue } from './venue-search.service';
+
 export interface ActivityRecommendation {
   id: string;
   name: string;
@@ -10,64 +12,279 @@ export interface ActivityRecommendation {
   estimatedCost: string;
   ageAppropriate: boolean;
   whyRecommended: string;
+  venues?: Venue[]; // Nearby venues where this activity can be pursued
 }
 
 export class ActivityRecommendationService {
   /**
    * Generate personalized activity recommendations based on report analysis
+   * Returns 3-5 highly targeted recommendations prioritizing:
+   * 1. Areas of improvement (60%)
+   * 2. Reinforcing strengths (30%)
+   * 3. Age-appropriate well-rounded development (10%)
    */
   generateRecommendations(report: any): ActivityRecommendation[] {
-    const recommendations: ActivityRecommendation[] = [];
     const grade = this.parseGrade(report.grade);
     const ageGroup = this.getAgeGroup(grade);
+    const age = this.estimateAge(report.grade);
 
-    // Analyze the report to determine development needs
-    const developmentNeeds = this.analyzeDevelopmentNeeds(report);
+    console.log(`Generating recommendations for age ${age}, grade ${report.grade}, ageGroup ${ageGroup}`);
 
-    // For early years children, ensure well-rounded development across all areas
-    // Even if no specific needs are identified, provide baseline recommendations
-    const isEarlyYears = ageGroup === 'early-years' || ageGroup === 'primary-lower';
+    // Analyze strengths and weaknesses from the report
+    const analysis = this.analyzeReportForRecommendations(report);
 
-    // Generate recommendations based on identified needs OR baseline for early years
-    if (developmentNeeds.needsRiskTaking || isEarlyYears) {
-      recommendations.push(...this.getPhysicalActivities(ageGroup));
+    console.log('Analysis:', {
+      weakAttributes: analysis.weakAttributes,
+      strongAttributes: analysis.strongAttributes
+    });
+
+    // Collect all potential activities
+    const allActivities: ActivityRecommendation[] = [];
+
+    // Get activities for ALL categories
+    allActivities.push(...this.getPhysicalActivities(ageGroup));
+    allActivities.push(...this.getCulturalActivities(ageGroup));
+    allActivities.push(...this.getSTEMActivities(ageGroup));
+    allActivities.push(...this.getMindfulnessActivities(ageGroup));
+    allActivities.push(...this.getStrengthMaintenanceActivities(report, ageGroup));
+
+    // Filter by age appropriateness
+    const ageAppropriateActivities = allActivities.filter(activity =>
+      this.isAgeAppropriate(activity, age)
+    );
+
+    // Score and rank activities based on alignment with needs
+    const scoredActivities = ageAppropriateActivities.map(activity => {
+      const score = this.scoreActivity(activity, analysis);
+      return { activity, score };
+    });
+
+    // Sort by score (highest first)
+    scoredActivities.sort((a, b) => b.score - a.score);
+
+    // Select top 3-5 activities ensuring diversity
+    const selectedActivities = this.selectDiverseActivities(
+      scoredActivities,
+      analysis,
+      3, // minimum
+      5  // maximum
+    );
+
+    console.log(`Selected ${selectedActivities.length} activities`);
+
+    return selectedActivities;
+  }
+
+  /**
+   * Enrich recommendations with nearby venue information
+   */
+  async enrichWithVenues(
+    recommendations: ActivityRecommendation[],
+    latitude: number,
+    longitude: number,
+    radiusMeters: number = 10000 // Default 10km
+  ): Promise<ActivityRecommendation[]> {
+    console.log(`Searching for venues near ${latitude}, ${longitude} within ${radiusMeters}m`);
+
+    const enrichedRecommendations = await Promise.all(
+      recommendations.map(async (rec) => {
+        try {
+          const venues = await venueSearchService.searchVenuesForActivity(
+            rec.name,
+            rec.category,
+            latitude,
+            longitude,
+            radiusMeters
+          );
+
+          console.log(`Found ${venues.length} venues for ${rec.name}`);
+
+          return {
+            ...rec,
+            venues
+          };
+        } catch (error) {
+          console.error(`Error searching venues for ${rec.name}:`, error);
+          return rec; // Return recommendation without venues if search fails
+        }
+      })
+    );
+
+    return enrichedRecommendations;
+  }
+
+  /**
+   * Analyze report to extract strengths and areas needing improvement
+   */
+  private analyzeReportForRecommendations(report: any): {
+    weakAttributes: string[];
+    strongAttributes: string[];
+    needsCategories: string[];
+  } {
+    const analysis = {
+      weakAttributes: [] as string[],
+      strongAttributes: [] as string[],
+      needsCategories: [] as string[]
+    };
+
+    // Extract from AI-generated summary
+    if (report.summary) {
+      // Areas needing attention = weaknesses
+      const areasNeedingAttention = report.summary.areasNeedingAttention || [];
+      areasNeedingAttention.forEach((area: string) => {
+        const areaLower = area.toLowerCase();
+
+        // Extract IB learner profile attributes mentioned
+        const ibAttributes = [
+          'inquirer', 'knowledgeable', 'thinker', 'communicator',
+          'principled', 'open-minded', 'caring', 'risk-taker',
+          'balanced', 'reflective'
+        ];
+
+        ibAttributes.forEach(attr => {
+          if (areaLower.includes(attr) || areaLower.includes(attr.replace('-', ' '))) {
+            if (!analysis.weakAttributes.includes(attr)) {
+              analysis.weakAttributes.push(attr);
+            }
+          }
+        });
+      });
+
+      // Key strengths
+      const keyStrengths = report.summary.keyStrengths || [];
+      keyStrengths.forEach((strength: string) => {
+        const strengthLower = strength.toLowerCase();
+
+        const ibAttributes = [
+          'inquirer', 'knowledgeable', 'thinker', 'communicator',
+          'principled', 'open-minded', 'caring', 'risk-taker',
+          'balanced', 'reflective'
+        ];
+
+        ibAttributes.forEach(attr => {
+          if (strengthLower.includes(attr) || strengthLower.includes(attr.replace('-', ' '))) {
+            if (!analysis.strongAttributes.includes(attr)) {
+              analysis.strongAttributes.push(attr);
+            }
+          }
+        });
+      });
     }
 
-    if (developmentNeeds.needsCulturalExposure || isEarlyYears) {
-      recommendations.push(...this.getCulturalActivities(ageGroup));
-    }
+    return analysis;
+  }
 
-    if (developmentNeeds.needsInquiryDevelopment || isEarlyYears) {
-      recommendations.push(...this.getSTEMActivities(ageGroup));
-    }
+  /**
+   * Score an activity based on how well it addresses the child's needs
+   */
+  private scoreActivity(
+    activity: ActivityRecommendation,
+    analysis: { weakAttributes: string[]; strongAttributes: string[] }
+  ): number {
+    let score = 0;
 
-    if (developmentNeeds.needsReflection || (isEarlyYears && grade >= 3)) {
-      recommendations.push(...this.getMindfulnessActivities(ageGroup));
-    }
+    // Primary goal: Address weaknesses (60% weight)
+    const targetAttrsLower = activity.targetAttributes.map(a => a.toLowerCase());
 
-    // Always include activities to maintain strengths
-    if (report.summary?.keyStrengths?.length > 0) {
-      recommendations.push(...this.getStrengthMaintenanceActivities(report, ageGroup));
-    }
-
-    // If we still have too few recommendations, ensure minimum variety
-    if (recommendations.length < 6 && isEarlyYears) {
-      const categories = new Set(recommendations.map(r => r.category));
-      if (!categories.has('Physical Development')) {
-        recommendations.push(...this.getPhysicalActivities(ageGroup).slice(0, 1));
+    analysis.weakAttributes.forEach(weakAttr => {
+      if (targetAttrsLower.some(target =>
+        target.includes(weakAttr) || weakAttr.includes(target)
+      )) {
+        score += 60; // High score for addressing weakness
       }
-      if (!categories.has('Cultural Exposure')) {
-        recommendations.push(...this.getCulturalActivities(ageGroup).slice(0, 1));
+    });
+
+    // Secondary goal: Reinforce strengths (30% weight)
+    analysis.strongAttributes.forEach(strongAttr => {
+      if (targetAttrsLower.some(target =>
+        target.includes(strongAttr) || strongAttr.includes(target)
+      )) {
+        score += 30; // Medium score for reinforcing strength
       }
-      if (!categories.has('STEM & Inquiry')) {
-        recommendations.push(...this.getSTEMActivities(ageGroup).slice(0, 1));
+    });
+
+    // Tertiary: Well-rounded development (10% weight)
+    score += 10; // Base score for all age-appropriate activities
+
+    // Boost for HIGH priority activities
+    if (activity.priority === 'HIGH') {
+      score += 20;
+    } else if (activity.priority === 'MEDIUM') {
+      score += 10;
+    }
+
+    return score;
+  }
+
+  /**
+   * Select 3-5 diverse activities from scored list
+   */
+  private selectDiverseActivities(
+    scoredActivities: { activity: ActivityRecommendation; score: number }[],
+    analysis: { weakAttributes: string[]; strongAttributes: string[] },
+    minActivities: number,
+    maxActivities: number
+  ): ActivityRecommendation[] {
+    const selected: ActivityRecommendation[] = [];
+    const usedCategories = new Set<string>();
+    const addressedWeakAttributes = new Set<string>();
+
+    // Priority 1: Ensure we address the top 2-3 weaknesses
+    const topWeaknesses = analysis.weakAttributes.slice(0, 3);
+
+    for (const activity of scoredActivities) {
+      if (selected.length >= maxActivities) break;
+
+      const activityWeaknesses = activity.activity.targetAttributes
+        .map(a => a.toLowerCase())
+        .filter(a => topWeaknesses.some(w => a.includes(w) || w.includes(a)));
+
+      // Select if it addresses an unaddressed weakness
+      if (activityWeaknesses.length > 0) {
+        const hasNewWeakness = activityWeaknesses.some(w =>
+          !Array.from(addressedWeakAttributes).some(aw => w.includes(aw) || aw.includes(w))
+        );
+
+        if (hasNewWeakness) {
+          selected.push(activity.activity);
+          usedCategories.add(activity.activity.category);
+          activityWeaknesses.forEach(w => addressedWeakAttributes.add(w));
+          continue;
+        }
       }
     }
 
-    // Sort by priority and return top recommendations
-    return recommendations
-      .sort((a, b) => this.priorityWeight(b.priority) - this.priorityWeight(a.priority))
-      .slice(0, 8); // Return top 8 recommendations
+    // Priority 2: Add strength-reinforcing activities (max 1-2)
+    let strengthActivities = 0;
+    for (const activity of scoredActivities) {
+      if (selected.length >= maxActivities) break;
+      if (strengthActivities >= 2) break;
+      if (selected.includes(activity.activity)) continue;
+
+      const activityStrengths = activity.activity.targetAttributes
+        .map(a => a.toLowerCase())
+        .filter(a => analysis.strongAttributes.some(s => a.includes(s) || s.includes(a)));
+
+      if (activityStrengths.length > 0 && activity.score >= 40) {
+        selected.push(activity.activity);
+        usedCategories.add(activity.activity.category);
+        strengthActivities++;
+      }
+    }
+
+    // Priority 3: Fill to minimum with highest-scored diverse activities
+    for (const activity of scoredActivities) {
+      if (selected.length >= minActivities) break;
+      if (selected.includes(activity.activity)) continue;
+
+      // Prefer different categories for diversity
+      if (!usedCategories.has(activity.activity.category) || selected.length < minActivities) {
+        selected.push(activity.activity);
+        usedCategories.add(activity.activity.category);
+      }
+    }
+
+    return selected;
   }
 
   /**
@@ -405,13 +622,64 @@ export class ActivityRecommendationService {
   private parseGrade(grade?: string): number {
     if (!grade) return 3;
 
-    // Handle IB format like "3D", "4A", etc.
+    // Handle IB format like "EYP 3", "PYP 3D", "4A", etc.
     const numMatch = grade.match(/\d+/);
     if (numMatch) {
       return parseInt(numMatch[0]);
     }
 
-    return 3; // Default to 3 years old
+    return 3; // Default to grade 3
+  }
+
+  /**
+   * Estimate age from grade level
+   * EYP (Early Years Programme): ages 3-6
+   * PYP (Primary Years Programme): ages 6-12
+   */
+  private estimateAge(grade?: string): number {
+    if (!grade) return 5;
+
+    const gradeLower = grade.toLowerCase();
+
+    // EYP (Early Years Programme) - ages 3-6
+    if (gradeLower.includes('eyp')) {
+      const num = this.parseGrade(grade);
+      return Math.min(2 + num, 6); // EYP 1 = age 3, EYP 2 = age 4, etc., max 6
+    }
+
+    // PYP (Primary Years Programme) or numeric grades
+    const gradeNum = this.parseGrade(grade);
+
+    // Grade to age mapping (assuming child starts Grade 1 at age 6)
+    if (gradeNum <= 0) return 5;  // Pre-K/Kindergarten
+    return 5 + gradeNum; // Grade 1 = age 6, Grade 2 = age 7, etc.
+  }
+
+  /**
+   * Check if activity is age-appropriate
+   */
+  private isAgeAppropriate(activity: ActivityRecommendation, age: number): boolean {
+    // All activities in the current database are marked ageAppropriate: true
+    // but we can add more granular age filtering here
+
+    const category = activity.category.toLowerCase();
+
+    // Some activities have minimum age requirements
+    if (category.includes('art therapy') && age < 4) return false;
+    if (category.includes('language immersion') && age < 3) return false;
+    if (category.includes('engineering') && age < 5) return false;
+
+    // Multi-sport is better for ages 4+
+    if (activity.id === 'multi-sport' && age < 4) return false;
+
+    // Swimming can start early
+    if (activity.id === 'swimming-lessons' && age < 3) return false;
+
+    // Gymnastics can start at age 3
+    if (activity.id === 'gymnastics-toddler' && age < 3) return false;
+
+    // Most activities are fine for ages 3-12
+    return true;
   }
 
   private getAgeGroup(grade: number): string {
