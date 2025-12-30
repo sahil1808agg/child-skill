@@ -421,11 +421,26 @@ Return ONLY the JSON, no markdown, no code blocks.`
 
   private extractGrade(text: string): string | undefined {
     // Pattern 1: IB formats like "EYP 3D", "PYP 1A", "MYP 2B" (Early Years/Primary Years/Middle Years Programme)
-    const ibPattern = /\b(EYP|PYP|MYP|DP)\s+(\d+[A-Z]?)\b/i
+    const ibPattern = /\b(EYP|PYP|MYP|DP)\s+(\d+)([A-Z]?)\b/i
     const ibMatch = ibPattern.exec(text)
     if (ibMatch) {
-      // Extract just the number/section part (e.g., "3D" or "1A")
-      return ibMatch[2].trim()
+      const programme = ibMatch[1].toUpperCase() // EYP, PYP, MYP, or DP
+      const gradeNum = ibMatch[2]  // 3, 1, 2, etc.
+      const section = ibMatch[3]   // D, A, B, etc. (optional)
+
+      // For EYP (Early Years Programme), preserve the EYP designation to distinguish from PYP
+      // This is important because "EYP 3" is very different from "Grade 3" (PYP)
+      if (programme === 'EYP') {
+        return `EYP ${gradeNum}`  // Return "EYP 3" for "EYP 3D"
+      }
+      // For PYP/MYP, return grade with section
+      else if (programme === 'PYP' || programme === 'MYP') {
+        return section ? `${gradeNum}${section}` : gradeNum
+      }
+      // For DP (Diploma Programme)
+      else {
+        return `${programme} ${gradeNum}`
+      }
     }
 
     // Pattern 2: "Grade: 1" or "Class: 2" (but not "grade level" or other generic phrases)

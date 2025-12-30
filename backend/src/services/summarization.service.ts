@@ -165,65 +165,86 @@ Summary (2-3 sentences):`;
   private async generateSummaryWithAI(report: any, genAI: GoogleGenerativeAI): Promise<any> {
     const context = this.buildReportContext(report);
     const ibStandards = this.getIBLearnerProfileStandards(report.grade);
+    const gradeLevel = report.grade || 'Unknown';
 
-    const prompt = `You are an expert IB educator analyzing a student report card. Your task is to provide a detailed, evidence-based comparison of this child's performance against the IB Primary Years Programme (PYP) learner profile standards for their grade level.
+    const prompt = `You are an expert IB educator analyzing a Grade ${gradeLevel} student's report card. Your task is to provide a detailed, comparative analysis of this child's performance AGAINST the IB Primary Years Programme (PYP) learner profile standards specifically for Grade ${gradeLevel}.
 
 STUDENT REPORT DATA:
 ${context}
 
-IB LEARNER PROFILE STANDARDS FOR THIS GRADE LEVEL:
+IB LEARNER PROFILE STANDARDS EXPECTED FOR GRADE ${gradeLevel}:
 ${ibStandards}
 
-ANALYSIS REQUIREMENTS:
+CRITICAL ANALYSIS REQUIREMENTS:
 
-You MUST carefully analyze the report and:
-1. Identify which IB learner profile attributes (Inquirers, Knowledgeable, Thinkers, Communicators, Principled, Open-minded, Caring, Risk-takers, Balanced, Reflective) the child demonstrates
-2. Find specific evidence from the report (teacher comments, grades, effort levels, behaviors) that shows these attributes
-3. Compare the child's demonstrated abilities against the grade-appropriate standards listed above
-4. Determine if the child is excelling, meeting, or developing toward these standards
+Your analysis MUST compare this student's actual performance against what is EXPECTED for a Grade ${gradeLevel} student in the IB framework. For EACH of the 10 IB learner profile attributes, evaluate:
+- Does the report show evidence the child demonstrates this attribute?
+- Is it at, above, or below grade-level expectations?
+- What specific evidence supports this assessment?
 
-CRITICAL: Be specific and evidence-based. Don't make generic statements. Reference actual subjects, behaviors, or teacher comments.
+MANDATORY COMPARISON FRAMEWORK:
+1. Read the Grade ${gradeLevel} IB standards above carefully
+2. For each attribute (Inquirers, Knowledgeable, Thinkers, Communicators, Principled, Open-minded, Caring, Risk-takers, Balanced, Reflective):
+   - Find evidence in the report (teacher comments, grades, behaviors, effort ratings)
+   - Compare to what's expected at Grade ${gradeLevel}
+   - Determine: Exceeding expectations / Meeting expectations / Developing toward expectations
+3. Identify 3-4 attributes where child EXCEEDS expectations (for Key Strengths)
+4. Identify 3-4 attributes where child is DEVELOPING or BELOW expectations (for Areas for Growth)
+
+CRITICAL RULES:
+- NO STUDENT is perfect at all 10 IB attributes - you MUST identify areas for growth
+- Every point must include SPECIFIC EVIDENCE from the report
+- Every point must EXPLICITLY mention which IB learner profile attribute it relates to
+- Compare behaviors to Grade ${gradeLevel} standards, not generic expectations
+- If evidence is limited for an attribute, note this as an area to observe/develop
 
 Generate a comprehensive summary with:
 
-1. OVERALL PERFORMANCE (25-35 words):
-   - Mention the child's grade level
-   - Give an honest assessment of where they stand relative to IB standards
-   - Mention 1-2 standout attributes they demonstrate
+1. OVERALL PERFORMANCE (30-40 words):
+   - Start with: "As a Grade ${gradeLevel} student in the IB PYP..."
+   - Compare overall development to Grade ${gradeLevel} IB expectations
+   - Mention 1-2 standout IB attributes where child excels for their grade
+   - Note 1 key area for continued development
+   - Be honest and balanced in assessment
 
-2. KEY STRENGTHS (3-5 concise bullet points):
-   - Identify SPECIFIC IB learner profile attributes the child demonstrates exceptionally well
-   - Provide EVIDENCE from the report (mention specific subjects, comments, or behaviors)
-   - Keep each point concise and focused
-   - Example format: "Strong INQUIRER - Exceptional curiosity in Science, asks probing questions (Teacher: 'always engaged')"
-   - Focus on areas where the child TRULY EXCELS compared to grade-level expectations
+2. KEY STRENGTHS (3-4 concise bullet points):
+   - Format: "[IB ATTRIBUTE] - [Specific evidence] compared to Grade ${gradeLevel} expectations"
+   - Example: "INQUIRER - Demonstrates curiosity beyond Grade 3 expectations; actively asks probing questions in Science and independently researches topics (Teacher: 'always engaged and curious')"
+   - Include specific subjects, grades, or teacher quotes as evidence
+   - Must show how child EXCEEDS typical Grade ${gradeLevel} development
+   - Each strength must reference a different IB learner profile attribute
 
-3. AREAS FOR GROWTH (3-5 bullet points):
-   - Identify SPECIFIC IB learner profile attributes the child should develop further
-   - Provide EVIDENCE from the report (mention specific subjects, effort grades, or teacher observations)
-   - Explain what growth would look like at their grade level
-   - Example format: "Developing as RISK-TAKER - Teacher notes hesitancy in trying new approaches in Math; encourage taking on challenging problems independently"
-   - Frame constructively as opportunities aligned with grade-level IB expectations
+3. AREAS FOR GROWTH (3-4 bullet points):
+   - Format: "[IB ATTRIBUTE] - [Current evidence] and [What growth looks like at Grade ${gradeLevel}]"
+   - Example: "RISK-TAKER - Shows hesitation when facing challenging Math problems (B grade, teacher notes 'needs encouragement'); Grade 3 students should approach uncertainty with more determination and try new strategies independently"
+   - MUST identify specific IB attributes where development is needed
+   - Reference the Grade ${gradeLevel} standards to explain growth targets
+   - Be constructive but honest about developmental areas
+   - Look for: subjects with lower grades, teacher concerns, missing skills for grade level, behavioral observations
+   - If no explicit concerns exist, identify attributes with limited evidence or room for deeper development
 
 4. TEACHER HIGHLIGHTS (2-3 bullet points):
-   - Extract the MOST IMPORTANT observations from teacher comments
-   - Connect these observations to IB learner profile development
-   - Include specific examples or subjects mentioned
+   - Extract MOST IMPORTANT teacher observations
+   - Connect each to IB learner profile attributes
+   - Example: "Excels in early writing with excellent clarity and spacing (COMMUNICATOR attribute)"
+   - Must include specific examples from teacher comments
 
-EXAMPLES OF GOOD ANALYSIS:
-✓ "Exceptional COMMUNICATOR - Expresses ideas clearly in English (A grade) and actively participates in class discussions as noted by teacher"
-✓ "Developing PRINCIPLED behavior - Teacher comments indicate inconsistency in taking responsibility for homework completion"
-✓ "Strong THINKER - Demonstrates critical thinking in Science projects and asks analytical questions"
+EXAMPLES OF GRADE-LEVEL COMPARATIVE ANALYSIS:
 
-EXAMPLES OF POOR ANALYSIS (DON'T DO THIS):
-✗ "Good at math" (too vague, no IB connection)
-✗ "Needs improvement in communication" (no evidence, no specifics)
-✗ "Nice student" (not analytical, no IB framework)
+✓ EXCELLENT: "THINKER - Demonstrates critical thinking beyond Grade 2 expectations; analyzes story characters' motivations in English and solves multi-step Math problems independently (A grades, teacher: 'exceptional analytical skills')"
 
-CRITICAL: Respond with ONLY valid JSON. No markdown, no code blocks, no explanations.
-- Use proper escape sequences for quotes within strings
-- Ensure all strings are properly closed
-- Do not include line breaks within string values
+✓ EXCELLENT: "PRINCIPLED - Developing consistency in homework completion typical for early Grade 3; teacher notes occasional forgetfulness with assignments; by mid-Grade 3, students should take full responsibility for work habits"
+
+✗ POOR: "Good at math" (no IB attribute, no comparison to grade expectations, no evidence)
+
+✗ POOR: "Excelling in Hindi (A level)" (no IB attribute connection, doesn't explain HOW they excel compared to Grade 3 standards)
+
+MANDATORY OUTPUT REQUIREMENTS:
+- You MUST fill all 4 sections (overallPerformance, keyStrengths, areasNeedingAttention, teacherHighlights)
+- areasNeedingAttention CANNOT be empty - every student has growth areas
+- EVERY bullet point must mention a specific IB learner profile attribute
+- EVERY bullet point must include concrete evidence from the report
+- Respond with ONLY valid JSON (no markdown, no code blocks)
 
 Format:
 {
@@ -255,12 +276,23 @@ Format:
       responseText = jsonMatch[0];
     }
 
+    // Clean up common JSON formatting issues from AI responses
+    // This handles cases where Gemini includes actual newlines in string values
+    try {
+      // Try to fix common JSON issues by parsing the structure manually
+      const fixedJson = this.fixMalformedJSON(responseText);
+      responseText = fixedJson;
+    } catch (fixError) {
+      console.log('JSON fix attempt failed, will try parsing as-is');
+    }
+
     let summaryData;
     try {
       summaryData = JSON.parse(responseText);
     } catch (parseError) {
-      console.error('Failed to parse Gemini response:', responseText);
+      console.error('Failed to parse Gemini response:', responseText.substring(0, 1000));
       console.error('Parse error:', parseError);
+      // Fall back to rule-based summary
       throw new Error('Invalid JSON response from Gemini');
     }
 
@@ -347,49 +379,101 @@ Format:
    * Generate summary for IB standards-based reports
    */
   private generateIBSummary(report: any, summary: any): any {
+    const gradeLevel = report.grade || 'Unknown';
+    const ibAttributes = ['Inquirer', 'Knowledgeable', 'Thinker', 'Communicator', 'Principled',
+                          'Open-minded', 'Caring', 'Risk-taker', 'Balanced', 'Reflective'];
+
     // Analyze IB subject areas
     const excellingCount = report.ibSubjectAreas?.filter((s: any) =>
       s.effortGrade === 'E' || s.effortGrade === 'A').length || 0;
     const developingCount = report.ibSubjectAreas?.filter((s: any) =>
-      s.effortGrade === 'D').length || 0;
+      s.effortGrade === 'D' || s.effortGrade === 'B').length || 0;
+    const totalSubjects = report.ibSubjectAreas?.length || 1;
 
-    if (excellingCount > developingCount) {
-      summary.overallPerformance = `Strong progress with ${excellingCount} subject areas at Achieving or Excelling level.`;
-    } else {
-      summary.overallPerformance = `Steady development across subject areas, with ${developingCount} areas actively building skills.`;
-    }
+    // Overall performance with grade-level context
+    const excellingPercent = Math.round((excellingCount / totalSubjects) * 100);
+    const programmeType = gradeLevel.includes('EYP') ? 'Early Years Programme (EYP)' :
+                         gradeLevel.includes('PYP') ? 'Primary Years Programme (PYP)' :
+                         gradeLevel.includes('MYP') ? 'Middle Years Programme (MYP)' : 'IB PYP';
 
-    // Key strengths from high-performing subjects
+    summary.overallPerformance = `As a ${gradeLevel} student in the IB ${programmeType}, showing ${excellingPercent}% achievement at A/E levels across ${totalSubjects} subject areas. ` +
+      `Demonstrates strong ${report.learnerProfileAttributes?.[0]?.attribute || 'IB learner'} qualities with continued development needed in consistency across all attributes.`;
+
+    // Key strengths - link subjects to IB attributes
+    const subjectAttributeMap: { [key: string]: string } = {
+      'English': 'COMMUNICATOR',
+      'Mathematics': 'THINKER',
+      'Math': 'THINKER',
+      'Science': 'INQUIRER',
+      'Hindi': 'COMMUNICATOR',
+      'PSPE': 'BALANCED',
+      'Arts': 'RISK-TAKER',
+      'Unit of Inquiry': 'KNOWLEDGEABLE'
+    };
+
     report.ibSubjectAreas?.forEach((area: any) => {
       if ((area.effortGrade === 'A' || area.effortGrade === 'E') &&
           summary.keyStrengths.length < 4) {
-        summary.keyStrengths.push(`Excelling in ${area.subjectName} (${area.effortGrade} level)`);
-      }
-    });
-
-    // Add learner profile attributes
-    if (report.learnerProfileAttributes?.length > 0) {
-      report.learnerProfileAttributes.slice(0, 2).forEach((attr: any) => {
-        if (summary.keyStrengths.length < 4) {
-          summary.keyStrengths.push(`Demonstrates ${attr.attribute} quality`);
-        }
-      });
-    }
-
-    // Areas needing attention
-    report.ibSubjectAreas?.forEach((area: any) => {
-      if ((area.effortGrade === 'B' || area.effortGrade === 'D') &&
-          summary.areasNeedingAttention.length < 4) {
-        summary.areasNeedingAttention.push(
-          `Continue practicing ${area.subjectName} (Currently at ${area.effortGrade} level)`
+        const attribute = subjectAttributeMap[area.subjectName] || 'KNOWLEDGEABLE';
+        summary.keyStrengths.push(
+          `${attribute} - Excels in ${area.subjectName} (${area.effortGrade} level), meeting Grade ${gradeLevel} IB expectations`
         );
       }
     });
 
-    // Teacher highlights
+    // Add learner profile attributes with evidence
+    if (report.learnerProfileAttributes?.length > 0 && summary.keyStrengths.length < 4) {
+      report.learnerProfileAttributes.slice(0, 4 - summary.keyStrengths.length).forEach((attr: any) => {
+        const evidence = attr.evidence?.substring(0, 100) || 'demonstrated throughout report';
+        summary.keyStrengths.push(
+          `${attr.attribute.toUpperCase()} - ${evidence}`
+        );
+      });
+    }
+
+    // Areas needing attention - always identify growth opportunities
+    report.ibSubjectAreas?.forEach((area: any) => {
+      if ((area.effortGrade === 'B' || area.effortGrade === 'D') &&
+          summary.areasNeedingAttention.length < 3) {
+        const attribute = subjectAttributeMap[area.subjectName] || 'KNOWLEDGEABLE';
+        summary.areasNeedingAttention.push(
+          `${attribute} - Continue developing in ${area.subjectName} (currently ${area.effortGrade} level); Grade ${gradeLevel} target is consistent A/E performance`
+        );
+      }
+    });
+
+    // If no areas identified yet, look for attributes not strongly demonstrated
+    const demonstratedAttributes = new Set(
+      report.learnerProfileAttributes?.map((a: any) => a.attribute.toLowerCase()) || []
+    );
+
+    if (summary.areasNeedingAttention.length < 3) {
+      ibAttributes.forEach(attr => {
+        if (!demonstratedAttributes.has(attr.toLowerCase()) &&
+            summary.areasNeedingAttention.length < 3) {
+          summary.areasNeedingAttention.push(
+            `${attr.toUpperCase()} - Limited evidence in report; encourage development of ${attr.toLowerCase()} qualities aligned with Grade ${gradeLevel} IB expectations`
+          );
+        }
+      });
+    }
+
+    // If still empty, add general development areas
+    if (summary.areasNeedingAttention.length === 0) {
+      summary.areasNeedingAttention.push(
+        `REFLECTIVE - Encourage self-assessment and goal-setting practices typical for Grade ${gradeLevel}`,
+        `RISK-TAKER - Foster independence in approaching challenging tasks without prompting`
+      );
+    }
+
+    // Teacher highlights with IB connections
     if (report.teacherComments) {
       const sentences = this.extractKeyPoints(report.teacherComments, 3);
-      summary.teacherHighlights = sentences;
+      summary.teacherHighlights = sentences.map((sentence, idx) => {
+        // Try to connect to IB attributes
+        const attr = report.learnerProfileAttributes?.[idx]?.attribute || '';
+        return attr ? `${sentence} (${attr.toUpperCase()} attribute)` : sentence;
+      });
     }
 
     return summary;
@@ -489,13 +573,32 @@ Format:
     };
 
     // Determine grade category
-    if (!grade || gradeLevel.includes('pre-k') || gradeLevel.includes('kindergarten') || gradeLevel === '1') {
+    // Note: In IB, EYP (Early Years Programme) covers ages 3-6 (roughly Pre-K to Grade 1)
+    // PYP (Primary Years Programme) covers ages 6-12 (roughly Grades 1-5)
+
+    if (!grade) {
+      return standards.middle; // Default to middle if unknown
+    }
+
+    // EYP (Early Years Programme) - All EYP grades are early years
+    if (gradeLevel.includes('eyp')) {
       return standards.early;
-    } else if (gradeLevel === '2' || gradeLevel === '3') {
+    }
+    // Pre-K, Kindergarten, Nursery, Grade 1
+    else if (gradeLevel.includes('pre-k') || gradeLevel.includes('kindergarten') ||
+             gradeLevel.includes('nursery') || gradeLevel === '1') {
+      return standards.early;
+    }
+    // Grades 2-3: Middle Primary
+    else if (gradeLevel === '2' || gradeLevel === '3') {
       return standards.middle;
-    } else if (gradeLevel === '4' || gradeLevel === '5') {
+    }
+    // Grades 4-5: Upper Primary
+    else if (gradeLevel === '4' || gradeLevel === '5') {
       return standards.upper;
-    } else {
+    }
+    // Grade 6+: Secondary
+    else {
       return standards.secondary;
     }
   }
@@ -569,6 +672,29 @@ Format:
       'F': 50, 'E': 50
     };
     return gradeMap[grade?.trim()?.toUpperCase()] || 70;
+  }
+
+  /**
+   * Helper: Fix malformed JSON from AI responses
+   * Handles cases where AI includes literal newlines in string values
+   */
+  private fixMalformedJSON(jsonStr: string): string {
+    // Strategy: Find string values and escape any unescaped newlines
+    let fixed = jsonStr;
+
+    // Replace all literal newlines within quoted strings with escaped newlines
+    // This regex finds strings and processes them
+    fixed = fixed.replace(/"([^"\\]*(?:\\.[^"\\]*)*)"/g, (match, content) => {
+      // Escape any literal newlines that aren't already escaped
+      const escaped = content
+        .replace(/\n/g, ' ')  // Replace newlines with spaces
+        .replace(/\r/g, '')   // Remove carriage returns
+        .replace(/\t/g, ' ')  // Replace tabs with spaces
+        .replace(/\s+/g, ' '); // Collapse multiple spaces
+      return `"${escaped}"`;
+    });
+
+    return fixed;
   }
 }
 

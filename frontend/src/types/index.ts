@@ -61,6 +61,20 @@ export interface Analysis {
   recommendations: string[];
 }
 
+export interface Venue {
+  name: string;
+  address: string;
+  distance?: string;
+  rating?: number;
+  totalRatings?: number;
+  phone?: string;
+  website?: string;
+  placeId: string;
+  latitude: number;
+  longitude: number;
+  types: string[];
+}
+
 export interface ActivityRecommendation {
   id: string;
   name: string;
@@ -73,4 +87,5 @@ export interface ActivityRecommendation {
   estimatedCost: string;
   ageAppropriate: boolean;
   whyRecommended: string;
+  venues?: Venue[];
 }

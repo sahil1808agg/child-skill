@@ -153,6 +153,10 @@ export const getActivityRecommendations = async (req: Request, res: Response) =>
   try {
     const reportId = req.params.id
 
+    // Get location from query parameters
+    // Can be: ?lat=28.6139&lng=77.2090 or ?address=Delhi or ?city=Delhi
+    const { lat, lng, latitude, longitude, address, city } = req.query
+
     // Find the report
     const report = await Report.findById(reportId)
 
@@ -161,14 +165,74 @@ export const getActivityRecommendations = async (req: Request, res: Response) =>
     }
 
     // Generate activity recommendations
-    const recommendations = activityRecommendationService.generateRecommendations(report)
+    let recommendations = activityRecommendationService.generateRecommendations(report)
+
+    // If location provided, enrich with venues
+    let location: { latitude: number; longitude: number } | null = null;
+
+    if (lat && lng) {
+      // Direct lat/lng provided
+      location = {
+        latitude: parseFloat(lat as string),
+        longitude: parseFloat(lng as string)
+      };
+    } else if (latitude && longitude) {
+      // Alternative parameter names
+      location = {
+        latitude: parseFloat(latitude as string),
+        longitude: parseFloat(longitude as string)
+      };
+    } else if (address || city) {
+      // Geocode address/city
+      const venueSearchService = require('../services/venue-search.service').default;
+      const searchAddress = (address || city) as string;
+      console.log(`Geocoding address: ${searchAddress}`);
+      location = await venueSearchService.geocodeLocation(searchAddress);
+
+      if (!location) {
+        console.warn(`Could not geocode address: ${searchAddress}`);
+      }
+    }
+
+    // Enrich with venues if location is available
+    if (location) {
+      console.log(`Enriching recommendations with venues near ${location.latitude}, ${location.longitude}`);
+      recommendations = await activityRecommendationService.enrichWithVenues(
+        recommendations,
+        location.latitude,
+        location.longitude,
+        10000 // 10km radius
+      );
+    }
 
     res.json({
       reportId,
+      location: location ? {
+        latitude: location.latitude,
+        longitude: location.longitude
+      } : null,
       recommendations
     })
   } catch (error) {
     console.error('Error generating activity recommendations:', error)
     res.status(500).json({ error: 'Failed to generate activity recommendations' })
+  }
+}
+
+export const getLocationAutocomplete = async (req: Request, res: Response) => {
+  try {
+    const { input } = req.query
+
+    if (!input || typeof input !== 'string') {
+      return res.status(400).json({ error: 'Input query parameter is required' })
+    }
+
+    const venueSearchService = require('../services/venue-search.service').default
+    const suggestions = await venueSearchService.getLocationSuggestions(input)
+
+    res.json({ suggestions })
+  } catch (error) {
+    console.error('Error getting location autocomplete:', error)
+    res.status(500).json({ error: 'Failed to get location suggestions' })
   }
 }
