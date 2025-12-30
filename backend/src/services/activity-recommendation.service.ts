@@ -10,9 +10,21 @@ export interface ActivityRecommendation {
   benefits: string[];
   frequency: string;
   estimatedCost: string;
+  estimatedCostUSD: { min: number; max: number }; // Cost range in USD for conversion
+  activityType: 'indoor' | 'outdoor' | 'both'; // Indoor, outdoor, or both
   ageAppropriate: boolean;
   whyRecommended: string;
+  recommendationType?: 'improvement' | 'strength' | 'age-based'; // Why this was recommended (computed during selection)
+  targetedAttributes?: string[]; // Specific weak or strong attributes this addresses (computed during selection)
   venues?: Venue[]; // Nearby venues where this activity can be pursued
+}
+
+export interface CurrentActivityEvaluation {
+  activityName: string;
+  recommendation: 'continue' | 'reconsider' | 'stop';
+  reasoning: string;
+  alignment: number; // 0-100 score for how well it aligns with needs
+  alternatives?: string[]; // Suggested alternatives if stop/reconsider
 }
 
 export class ActivityRecommendationService {
@@ -46,6 +58,7 @@ export class ActivityRecommendationService {
     allActivities.push(...this.getCulturalActivities(ageGroup));
     allActivities.push(...this.getSTEMActivities(ageGroup));
     allActivities.push(...this.getMindfulnessActivities(ageGroup));
+    allActivities.push(...this.getAtHomeActivities(ageGroup, age));
     allActivities.push(...this.getStrengthMaintenanceActivities(report, ageGroup));
 
     // Filter by age appropriateness
@@ -76,7 +89,52 @@ export class ActivityRecommendationService {
   }
 
   /**
-   * Enrich recommendations with nearby venue information
+   * Convert USD cost to local currency based on location
+   */
+  private convertCurrency(usdMin: number, usdMax: number, country: string): string {
+    const currencyRates: { [key: string]: { rate: number; symbol: string; name: string } } = {
+      'India': { rate: 83, symbol: '₹', name: 'INR' },
+      'United States': { rate: 1, symbol: '$', name: 'USD' },
+      'United Kingdom': { rate: 0.79, symbol: '£', name: 'GBP' },
+      'Singapore': { rate: 1.34, symbol: 'S$', name: 'SGD' },
+      'UAE': { rate: 3.67, symbol: 'AED', name: 'AED' },
+      'Australia': { rate: 1.52, symbol: 'A$', name: 'AUD' },
+      'Canada': { rate: 1.35, symbol: 'C$', name: 'CAD' }
+    };
+
+    // Default to USD if country not found
+    const currencyInfo = currencyRates[country] || currencyRates['United States'];
+
+    const localMin = Math.round(usdMin * currencyInfo.rate);
+    const localMax = Math.round(usdMax * currencyInfo.rate);
+
+    return `${currencyInfo.symbol}${localMin}-${localMax} per month`;
+  }
+
+  /**
+   * Detect country from coordinates (simplified - based on common locations)
+   */
+  private async detectCountry(latitude: number, longitude: number): Promise<string> {
+    // Simplified country detection based on lat/long ranges
+    // India: roughly 8-35°N, 68-97°E
+    if (latitude >= 8 && latitude <= 35 && longitude >= 68 && longitude <= 97) {
+      return 'India';
+    }
+    // Singapore: roughly 1.2-1.5°N, 103-104°E
+    if (latitude >= 1.2 && latitude <= 1.5 && longitude >= 103 && longitude <= 104) {
+      return 'Singapore';
+    }
+    // UAE: roughly 22-26°N, 51-56°E
+    if (latitude >= 22 && latitude <= 26 && longitude >= 51 && longitude <= 56) {
+      return 'UAE';
+    }
+    // Default to USD
+    return 'United States';
+  }
+
+  /**
+   * Enrich recommendations with nearby venue information and local currency
+   * Prioritizes activities based on local availability
    */
   async enrichWithVenues(
     recommendations: ActivityRecommendation[],
@@ -86,9 +144,26 @@ export class ActivityRecommendationService {
   ): Promise<ActivityRecommendation[]> {
     console.log(`Searching for venues near ${latitude}, ${longitude} within ${radiusMeters}m`);
 
+    // Detect country from coordinates for currency conversion
+    const country = await this.detectCountry(latitude, longitude);
+    console.log(`Detected country: ${country}`);
+
     const enrichedRecommendations = await Promise.all(
       recommendations.map(async (rec) => {
         try {
+          // At-home activities don't need venue search
+          if (rec.category === 'At-Home Learning') {
+            const localCost = this.convertCurrency(
+              rec.estimatedCostUSD.min,
+              rec.estimatedCostUSD.max,
+              country
+            );
+            return {
+              ...rec,
+              estimatedCost: localCost
+            };
+          }
+
           const venues = await venueSearchService.searchVenuesForActivity(
             rec.name,
             rec.category,
@@ -99,8 +174,16 @@ export class ActivityRecommendationService {
 
           console.log(`Found ${venues.length} venues for ${rec.name}`);
 
+          // Convert cost to local currency
+          const localCost = this.convertCurrency(
+            rec.estimatedCostUSD.min,
+            rec.estimatedCostUSD.max,
+            country
+          );
+
           return {
             ...rec,
+            estimatedCost: localCost, // Override with local currency
             venues
           };
         } catch (error) {
@@ -110,11 +193,310 @@ export class ActivityRecommendationService {
       })
     );
 
-    return enrichedRecommendations;
+    // Re-prioritize based on venue availability
+    // Activities with venues nearby should be prioritized
+    const prioritized = this.prioritizeByVenueAvailability(enrichedRecommendations);
+
+    return prioritized;
+  }
+
+  /**
+   * Prioritize recommendations based on venue availability
+   * Activities with more venues get higher priority as they're more accessible
+   */
+  private prioritizeByVenueAvailability(recommendations: ActivityRecommendation[]): ActivityRecommendation[] {
+    // Separate at-home activities (always keep them) from formal activities
+    const atHomeActivities = recommendations.filter(r => r.category === 'At-Home Learning');
+    const formalActivities = recommendations.filter(r => r.category !== 'At-Home Learning');
+
+    // Sort formal activities by venue count (descending)
+    formalActivities.sort((a, b) => {
+      const venuesA = a.venues?.length || 0;
+      const venuesB = b.venues?.length || 0;
+
+      // If both have 0 venues, keep original order
+      if (venuesA === 0 && venuesB === 0) return 0;
+
+      // Prioritize activities with venues
+      return venuesB - venuesA;
+    });
+
+    // Interleave: Include at least 1-2 at-home activities, rest from venue-prioritized formal activities
+    const result: ActivityRecommendation[] = [];
+    const maxAtHome = Math.min(2, atHomeActivities.length);
+    const maxFormal = recommendations.length - maxAtHome;
+
+    // Add top at-home activities
+    result.push(...atHomeActivities.slice(0, maxAtHome));
+
+    // Add venue-prioritized formal activities
+    result.push(...formalActivities.slice(0, maxFormal));
+
+    console.log('Venue-based prioritization:', {
+      total: result.length,
+      atHome: maxAtHome,
+      formal: result.length - maxAtHome,
+      withVenues: result.filter(r => r.venues && r.venues.length > 0).length
+    });
+
+    return result.slice(0, recommendations.length); // Keep same count as input
+  }
+
+  /**
+   * Evaluate current activities the child is engaged in
+   * Determines whether each activity should be continued, reconsidered, or stopped
+   */
+  evaluateCurrentActivities(
+    report: any,
+    currentActivities: string[]
+  ): CurrentActivityEvaluation[] {
+    console.log(`Evaluating ${currentActivities.length} current activities`);
+
+    // Analyze the child's strengths and weaknesses
+    const analysis = this.analyzeReportForRecommendations(report);
+
+    const evaluations: CurrentActivityEvaluation[] = currentActivities.map(activityName => {
+      // Determine what attributes this activity likely develops
+      const activityAttributes = this.inferActivityAttributes(activityName);
+
+      // Calculate alignment score based on how well it addresses needs
+      const { score, reasoning } = this.calculateActivityAlignment(
+        activityAttributes,
+        analysis,
+        activityName
+      );
+
+      // Determine recommendation based on alignment score
+      let recommendation: 'continue' | 'reconsider' | 'stop';
+      let alternatives: string[] | undefined;
+
+      if (score >= 60) {
+        recommendation = 'continue';
+      } else if (score >= 30) {
+        recommendation = 'reconsider';
+        alternatives = this.suggestAlternatives(activityName, analysis);
+      } else {
+        recommendation = 'stop';
+        alternatives = this.suggestAlternatives(activityName, analysis);
+      }
+
+      return {
+        activityName,
+        recommendation,
+        reasoning,
+        alignment: score,
+        alternatives
+      };
+    });
+
+    return evaluations;
+  }
+
+  /**
+   * Infer what IB learner profile attributes an activity develops
+   */
+  private inferActivityAttributes(activityName: string): string[] {
+    const name = activityName.toLowerCase();
+    const attributes: string[] = [];
+
+    // Physical/Sports activities
+    if (
+      name.includes('sport') ||
+      name.includes('soccer') ||
+      name.includes('basketball') ||
+      name.includes('swim') ||
+      name.includes('gymnastics') ||
+      name.includes('dance') ||
+      name.includes('karate') ||
+      name.includes('tennis') ||
+      name.includes('yoga')
+    ) {
+      attributes.push('risk-taker', 'balanced', 'principled');
+    }
+
+    // Arts/Creative activities
+    if (
+      name.includes('art') ||
+      name.includes('music') ||
+      name.includes('piano') ||
+      name.includes('guitar') ||
+      name.includes('paint') ||
+      name.includes('draw') ||
+      name.includes('theater') ||
+      name.includes('drama')
+    ) {
+      attributes.push('communicator', 'open-minded', 'reflective', 'risk-taker');
+    }
+
+    // Language activities
+    if (
+      name.includes('language') ||
+      name.includes('spanish') ||
+      name.includes('french') ||
+      name.includes('mandarin') ||
+      name.includes('english') ||
+      name.includes('reading')
+    ) {
+      attributes.push('communicator', 'open-minded', 'knowledgeable');
+    }
+
+    // STEM activities
+    if (
+      name.includes('science') ||
+      name.includes('math') ||
+      name.includes('coding') ||
+      name.includes('robot') ||
+      name.includes('engineering') ||
+      name.includes('lego') ||
+      name.includes('stem')
+    ) {
+      attributes.push('inquirer', 'knowledgeable', 'thinker');
+    }
+
+    // Social/Community activities
+    if (
+      name.includes('volunteer') ||
+      name.includes('community') ||
+      name.includes('scout') ||
+      name.includes('club')
+    ) {
+      attributes.push('caring', 'principled', 'communicator', 'open-minded');
+    }
+
+    // Mindfulness/Reflection activities
+    if (
+      name.includes('meditation') ||
+      name.includes('mindfulness') ||
+      name.includes('journal')
+    ) {
+      attributes.push('reflective', 'balanced', 'caring');
+    }
+
+    // If no specific match, assign general attributes
+    if (attributes.length === 0) {
+      attributes.push('balanced', 'knowledgeable');
+    }
+
+    return attributes;
+  }
+
+  /**
+   * Calculate how well an activity aligns with the child's needs
+   */
+  private calculateActivityAlignment(
+    activityAttributes: string[],
+    analysis: { weakAttributes: string[]; strongAttributes: string[] },
+    activityName: string
+  ): { score: number; reasoning: string } {
+    let score = 30; // Base score - every activity has some value
+    const reasons: string[] = [];
+
+    const activityAttrsLower = activityAttributes.map(a => a.toLowerCase());
+
+    // Check if activity addresses weaknesses (highest priority)
+    let addressesWeaknesses = 0;
+    analysis.weakAttributes.forEach(weakAttr => {
+      if (activityAttrsLower.some(attr =>
+        attr.includes(weakAttr.toLowerCase()) || weakAttr.toLowerCase().includes(attr)
+      )) {
+        score += 25; // Significant bonus for addressing weakness
+        addressesWeaknesses++;
+      }
+    });
+
+    if (addressesWeaknesses > 0) {
+      reasons.push(`addresses ${addressesWeaknesses} area${addressesWeaknesses > 1 ? 's' : ''} needing development (${analysis.weakAttributes.slice(0, 3).join(', ')})`);
+    }
+
+    // Check if activity reinforces strengths (medium priority)
+    let reinforcesStrengths = 0;
+    analysis.strongAttributes.forEach(strongAttr => {
+      if (activityAttrsLower.some(attr =>
+        attr.includes(strongAttr.toLowerCase()) || strongAttr.toLowerCase().includes(attr)
+      )) {
+        score += 15; // Medium bonus for reinforcing strength
+        reinforcesStrengths++;
+      }
+    });
+
+    if (reinforcesStrengths > 0) {
+      reasons.push(`reinforces existing strengths in ${analysis.strongAttributes.slice(0, 2).join(' and ')}`);
+    }
+
+    // Determine overall recommendation reasoning
+    let reasoning = `${activityName} `;
+
+    if (score >= 60) {
+      reasoning += `is well-aligned with your child's development needs. It ${reasons.join(' and ')}. This is a valuable activity to continue.`;
+    } else if (score >= 30) {
+      if (addressesWeaknesses === 0 && reinforcesStrengths === 0) {
+        reasoning += `has limited alignment with current development priorities. While not harmful, it doesn't specifically target areas needing attention (${analysis.weakAttributes.slice(0, 2).join(', ')}) or build on strengths (${analysis.strongAttributes.slice(0, 2).join(', ')}). Consider whether this is the best use of time and resources.`;
+      } else if (addressesWeaknesses === 0) {
+        reasoning += `primarily ${reasons.join(' but ')}. Consider balancing this with activities that address areas needing development like ${analysis.weakAttributes.slice(0, 2).join(' and ')}.`;
+      } else {
+        reasoning += `shows moderate alignment. It ${reasons.join(' and ')}, but there may be more targeted options available.`;
+      }
+    } else {
+      reasoning += `has minimal alignment with your child's current development needs. It doesn't address key areas needing attention (${analysis.weakAttributes.slice(0, 2).join(', ')}) and may not be the most beneficial use of time. Consider replacing with activities more aligned with developmental goals.`;
+    }
+
+    // Cap score at 100
+    score = Math.min(100, score);
+
+    return { score, reasoning };
+  }
+
+  /**
+   * Suggest alternative activities that better align with needs
+   */
+  private suggestAlternatives(
+    currentActivity: string,
+    analysis: { weakAttributes: string[]; strongAttributes: string[] }
+  ): string[] {
+    const alternatives: string[] = [];
+
+    // Suggest activities based on top weaknesses
+    const topWeaknesses = analysis.weakAttributes.slice(0, 3);
+
+    topWeaknesses.forEach(weakness => {
+      const weaknessLower = weakness.toLowerCase();
+
+      if (weaknessLower.includes('risk-taker') || weaknessLower.includes('risk taker')) {
+        alternatives.push('Swimming lessons or Gymnastics to build confidence in new challenges');
+      }
+
+      if (weaknessLower.includes('open-minded') || weaknessLower.includes('open minded')) {
+        alternatives.push('World Music & Movement or Language Immersion classes');
+      }
+
+      if (weaknessLower.includes('inquirer')) {
+        alternatives.push('Science Exploration Club or Nature & Outdoor Exploration');
+      }
+
+      if (weaknessLower.includes('knowledgeable')) {
+        alternatives.push('STEM activities or Cross-disciplinary learning programs');
+      }
+
+      if (weaknessLower.includes('reflective')) {
+        alternatives.push('Kids Yoga & Mindfulness or Art Therapy');
+      }
+
+      if (weaknessLower.includes('communicator')) {
+        alternatives.push('Creative Drama/Theater Arts or Language classes');
+      }
+
+      if (weaknessLower.includes('caring')) {
+        alternatives.push('Community service projects or Team sports');
+      }
+    });
+
+    // Remove duplicates and limit to top 3
+    return [...new Set(alternatives)].slice(0, 3);
   }
 
   /**
    * Analyze report to extract strengths and areas needing improvement
+   * Now extracts directly from IB Learner Profile Attributes with strength categorization
    */
   private analyzeReportForRecommendations(report: any): {
     weakAttributes: string[];
@@ -127,7 +509,50 @@ export class ActivityRecommendationService {
       needsCategories: [] as string[]
     };
 
-    // Extract from AI-generated summary
+    // PRIMARY SOURCE: IB Learner Profile Attributes from report
+    if (report.learnerProfileAttributes && report.learnerProfileAttributes.length > 0) {
+      // Keywords to categorize strength levels
+      const strengthKeywords = [
+        'excellent', 'strong', 'consistently', 'always', 'demonstrates well',
+        'exceptional', 'outstanding', 'impressive', 'highly', 'very well',
+        'effectively', 'confidently', 'proficient', 'mastery', 'excels'
+      ];
+
+      const developingKeywords = [
+        'developing', 'sometimes', 'occasionally', 'beginning to', 'needs',
+        'should', 'could improve', 'working on', 'learning to', 'emerging',
+        'inconsistent', 'requires support', 'struggles', 'difficulty'
+      ];
+
+      report.learnerProfileAttributes.forEach((attr: any) => {
+        const attributeName = attr.attribute.toLowerCase();
+        const evidence = (attr.evidence || '').toLowerCase();
+
+        // Categorize based on evidence keywords
+        const hasStrengthIndicators = strengthKeywords.some(keyword => evidence.includes(keyword));
+        const hasDevelopingIndicators = developingKeywords.some(keyword => evidence.includes(keyword));
+
+        if (hasStrengthIndicators && !hasDevelopingIndicators) {
+          // This is a strength
+          if (!analysis.strongAttributes.includes(attributeName)) {
+            analysis.strongAttributes.push(attributeName);
+          }
+        } else if (hasDevelopingIndicators || !hasStrengthIndicators) {
+          // This needs work (either explicitly developing or neutral/no clear strength)
+          if (!analysis.weakAttributes.includes(attributeName)) {
+            analysis.weakAttributes.push(attributeName);
+          }
+        }
+      });
+
+      console.log('IB Attributes Analysis:', {
+        total: report.learnerProfileAttributes.length,
+        strong: analysis.strongAttributes,
+        developing: analysis.weakAttributes
+      });
+    }
+
+    // SECONDARY SOURCE: AI-generated summary (for additional context)
     if (report.summary) {
       // Areas needing attention = weaknesses
       const areasNeedingAttention = report.summary.areasNeedingAttention || [];
@@ -218,6 +643,7 @@ export class ActivityRecommendationService {
 
   /**
    * Select 3-5 diverse activities from scored list
+   * Ensures a good mix of sports/physical activities and other categories
    */
   private selectDiverseActivities(
     scoredActivities: { activity: ActivityRecommendation; score: number }[],
@@ -228,12 +654,57 @@ export class ActivityRecommendationService {
     const selected: ActivityRecommendation[] = [];
     const usedCategories = new Set<string>();
     const addressedWeakAttributes = new Set<string>();
+    let hasSportsActivity = false;
+    let indoorCount = 0;
+    let outdoorCount = 0;
 
-    // Priority 1: Ensure we address the top 2-3 weaknesses
+    // Track indoor/outdoor counts
+    const trackActivityType = (activity: ActivityRecommendation) => {
+      if (activity.activityType === 'indoor') {
+        indoorCount++;
+      } else if (activity.activityType === 'outdoor') {
+        outdoorCount++;
+      } else if (activity.activityType === 'both') {
+        // Count 'both' as half indoor and half outdoor
+        indoorCount += 0.5;
+        outdoorCount += 0.5;
+      }
+    };
+
+    // Priority 0: Ensure at least ONE physical/sports activity for balanced development
+    const physicalCategories = ['Physical Development', 'Physical', 'Sports'];
+    const physicalActivities = scoredActivities.filter(sa =>
+      physicalCategories.some(cat => sa.activity.category.includes(cat))
+    );
+
+    if (physicalActivities.length > 0 && selected.length < maxActivities) {
+      // Select highest-scored physical activity
+      const bestPhysical = physicalActivities[0];
+      const weaknesses = bestPhysical.activity.targetAttributes
+        .map(a => a.toLowerCase())
+        .filter(a => analysis.weakAttributes.some(w => a.includes(w) || w.includes(a)));
+
+      const enrichedActivity = {
+        ...bestPhysical.activity,
+        recommendationType: weaknesses.length > 0 ? 'improvement' as const : 'age-based' as const,
+        targetedAttributes: weaknesses.length > 0 ? weaknesses : []
+      };
+
+      selected.push(enrichedActivity);
+      usedCategories.add(bestPhysical.activity.category);
+      hasSportsActivity = true;
+      trackActivityType(enrichedActivity);
+      weaknesses.forEach(w => addressedWeakAttributes.add(w));
+
+      console.log(`Added physical activity: ${bestPhysical.activity.name} (${enrichedActivity.activityType})`);
+    }
+
+    // Priority 1: Ensure we address the top 2-3 weaknesses with indoor/outdoor balance
     const topWeaknesses = analysis.weakAttributes.slice(0, 3);
 
     for (const activity of scoredActivities) {
       if (selected.length >= maxActivities) break;
+      if (selected.some(a => a.id === activity.activity.id)) continue;
 
       const activityWeaknesses = activity.activity.targetAttributes
         .map(a => a.toLowerCase())
@@ -246,43 +717,139 @@ export class ActivityRecommendationService {
         );
 
         if (hasNewWeakness) {
-          selected.push(activity.activity);
-          usedCategories.add(activity.activity.category);
-          activityWeaknesses.forEach(w => addressedWeakAttributes.add(w));
-          continue;
+          // Consider indoor/outdoor balance when selecting
+          const needsMoreOutdoor = outdoorCount < 1 && selected.length >= 2;
+          const needsMoreIndoor = indoorCount < 1 && selected.length >= 2;
+
+          // Prefer outdoor if we need it and this is outdoor
+          if (needsMoreOutdoor && activity.activity.activityType !== 'indoor') {
+            const enrichedActivity = {
+              ...activity.activity,
+              recommendationType: 'improvement' as const,
+              targetedAttributes: activityWeaknesses
+            };
+            selected.push(enrichedActivity);
+            usedCategories.add(activity.activity.category);
+            trackActivityType(enrichedActivity);
+            activityWeaknesses.forEach(w => addressedWeakAttributes.add(w));
+            continue;
+          }
+
+          // Prefer indoor if we need it and this is indoor
+          if (needsMoreIndoor && activity.activity.activityType !== 'outdoor') {
+            const enrichedActivity = {
+              ...activity.activity,
+              recommendationType: 'improvement' as const,
+              targetedAttributes: activityWeaknesses
+            };
+            selected.push(enrichedActivity);
+            usedCategories.add(activity.activity.category);
+            trackActivityType(enrichedActivity);
+            activityWeaknesses.forEach(w => addressedWeakAttributes.add(w));
+            continue;
+          }
+
+          // If balance is fine or this helps balance, add it
+          if (!needsMoreIndoor && !needsMoreOutdoor) {
+            const enrichedActivity = {
+              ...activity.activity,
+              recommendationType: 'improvement' as const,
+              targetedAttributes: activityWeaknesses
+            };
+            selected.push(enrichedActivity);
+            usedCategories.add(activity.activity.category);
+            trackActivityType(enrichedActivity);
+            activityWeaknesses.forEach(w => addressedWeakAttributes.add(w));
+            continue;
+          }
         }
       }
     }
 
-    // Priority 2: Add strength-reinforcing activities (max 1-2)
+    // Priority 2: Add strength-reinforcing activities (max 1-2) with balance
     let strengthActivities = 0;
     for (const activity of scoredActivities) {
       if (selected.length >= maxActivities) break;
       if (strengthActivities >= 2) break;
-      if (selected.includes(activity.activity)) continue;
+      if (selected.some(a => a.id === activity.activity.id)) continue;
 
       const activityStrengths = activity.activity.targetAttributes
         .map(a => a.toLowerCase())
         .filter(a => analysis.strongAttributes.some(s => a.includes(s) || s.includes(a)));
 
       if (activityStrengths.length > 0 && activity.score >= 40) {
-        selected.push(activity.activity);
+        // Add metadata about why this was recommended
+        const enrichedActivity = {
+          ...activity.activity,
+          recommendationType: 'strength' as const,
+          targetedAttributes: activityStrengths
+        };
+        selected.push(enrichedActivity);
         usedCategories.add(activity.activity.category);
+        trackActivityType(enrichedActivity);
         strengthActivities++;
       }
     }
 
     // Priority 3: Fill to minimum with highest-scored diverse activities
+    // Prefer different categories for a well-rounded program
+    // Also ensure indoor/outdoor balance
     for (const activity of scoredActivities) {
       if (selected.length >= minActivities) break;
-      if (selected.includes(activity.activity)) continue;
+      if (selected.some(a => a.id === activity.activity.id)) continue;
+
+      // Check if we need specific indoor/outdoor to balance
+      const needsOutdoor = outdoorCount === 0 && selected.length >= 2;
+      const needsIndoor = indoorCount === 0 && selected.length >= 2;
+
+      // Prefer activities that help balance
+      if (needsOutdoor && activity.activity.activityType === 'outdoor') {
+        const enrichedActivity = {
+          ...activity.activity,
+          recommendationType: 'age-based' as const,
+          targetedAttributes: []
+        };
+        selected.push(enrichedActivity);
+        usedCategories.add(activity.activity.category);
+        trackActivityType(enrichedActivity);
+        continue;
+      }
+
+      if (needsIndoor && activity.activity.activityType === 'indoor') {
+        const enrichedActivity = {
+          ...activity.activity,
+          recommendationType: 'age-based' as const,
+          targetedAttributes: []
+        };
+        selected.push(enrichedActivity);
+        usedCategories.add(activity.activity.category);
+        trackActivityType(enrichedActivity);
+        continue;
+      }
 
       // Prefer different categories for diversity
       if (!usedCategories.has(activity.activity.category) || selected.length < minActivities) {
-        selected.push(activity.activity);
+        // Add metadata about why this was recommended
+        const enrichedActivity = {
+          ...activity.activity,
+          recommendationType: 'age-based' as const,
+          targetedAttributes: []
+        };
+        selected.push(enrichedActivity);
         usedCategories.add(activity.activity.category);
+        trackActivityType(enrichedActivity);
       }
     }
+
+    console.log('Activity Mix Summary:', {
+      total: selected.length,
+      hasSports: hasSportsActivity,
+      indoor: indoorCount,
+      outdoor: outdoorCount,
+      categories: Array.from(usedCategories),
+      improvementFocus: selected.filter(a => a.recommendationType === 'improvement').length,
+      strengthFocus: selected.filter(a => a.recommendationType === 'strength').length
+    });
 
     return selected;
   }
@@ -359,6 +926,8 @@ export class ActivityRecommendationService {
         ],
         frequency: '2x per week, 45-60 minutes',
         estimatedCost: '$100-150 per month',
+        estimatedCostUSD: { min: 100, max: 150 },
+        activityType: 'indoor',
         ageAppropriate: true,
         whyRecommended: 'Directly addresses risk-taking development in a structured, safe environment. Most critical for IB learner profile growth.'
       });
@@ -378,6 +947,8 @@ export class ActivityRecommendationService {
         ],
         frequency: '1-2x per week, 30-45 minutes',
         estimatedCost: '$80-150 per month',
+        estimatedCostUSD: { min: 80, max: 150 },
+        activityType: 'indoor',
         ageAppropriate: true,
         whyRecommended: 'Essential life skill that naturally develops risk-taking and confidence. Safe environment for facing fears.'
       });
@@ -397,6 +968,8 @@ export class ActivityRecommendationService {
         ],
         frequency: '1-2x per week, 45-60 minutes',
         estimatedCost: '$60-120 per month',
+        estimatedCostUSD: { min: 60, max: 120 },
+        activityType: 'outdoor',
         ageAppropriate: true,
         whyRecommended: 'Variety keeps engagement high while developing multiple physical competencies and risk-taking in a team environment.'
       });
@@ -426,6 +999,8 @@ export class ActivityRecommendationService {
       ],
       frequency: '1x per week, 45 minutes',
       estimatedCost: '$60-100 per month',
+      estimatedCostUSD: { min: 60, max: 100 },
+      activityType: 'indoor',
       ageAppropriate: true,
       whyRecommended: 'Directly develops open-minded attribute through joyful, engaging cultural exposure. Leverages existing communication strengths.'
     });
@@ -445,6 +1020,8 @@ export class ActivityRecommendationService {
       ],
       frequency: '1-2x per week, 45-60 minutes',
       estimatedCost: '$80-150 per month',
+      estimatedCostUSD: { min: 80, max: 150 },
+      activityType: 'indoor',
       ageAppropriate: true,
       whyRecommended: 'IB values multilingualism highly. Builds on existing language strengths while developing cultural awareness.'
     });
@@ -464,6 +1041,8 @@ export class ActivityRecommendationService {
       ],
       frequency: '1x per week, 60 minutes',
       estimatedCost: '$60-120 per month',
+      estimatedCostUSD: { min: 60, max: 120 },
+      activityType: 'indoor',
       ageAppropriate: true,
       whyRecommended: 'Combines artistic strength with cultural learning. Develops open-minded perspective through narrative and art.'
     });
@@ -492,6 +1071,8 @@ export class ActivityRecommendationService {
       ],
       frequency: '1x per week or bi-weekly, 60 minutes',
       estimatedCost: '$60-120 per month',
+      estimatedCostUSD: { min: 60, max: 120 },
+      activityType: 'indoor',
       ageAppropriate: true,
       whyRecommended: 'Addresses need for cross-disciplinary knowledge. Develops inquiry skills essential for IB learning.'
     });
@@ -511,6 +1092,8 @@ export class ActivityRecommendationService {
       ],
       frequency: '1-2x per month, 90-120 minutes',
       estimatedCost: '$40-80 per month',
+      estimatedCostUSD: { min: 40, max: 80 },
+      activityType: 'outdoor',
       ageAppropriate: true,
       whyRecommended: 'Combines inquiry, knowledge, and caring attributes. Addresses need for engagement with local/global issues.'
     });
@@ -530,6 +1113,8 @@ export class ActivityRecommendationService {
       ],
       frequency: '1x per week, 60 minutes',
       estimatedCost: '$60-120 per month',
+      estimatedCostUSD: { min: 60, max: 120 },
+      activityType: 'indoor',
       ageAppropriate: true,
       whyRecommended: 'Develops critical thinking and problem-solving. Natural risk-taking through building and testing.'
     });
@@ -558,6 +1143,8 @@ export class ActivityRecommendationService {
       ],
       frequency: '1x per week, 30-45 minutes (can also practice at home daily)',
       estimatedCost: '$40-80 per month',
+      estimatedCostUSD: { min: 40, max: 80 },
+      activityType: 'both',
       ageAppropriate: true,
       whyRecommended: 'Directly develops reflective attribute. Can be practiced at home for sustained impact.'
     });
@@ -577,8 +1164,153 @@ export class ActivityRecommendationService {
       ],
       frequency: '1-2x per month, 45-60 minutes',
       estimatedCost: '$80-150 per month',
+      estimatedCostUSD: { min: 80, max: 150 },
+      activityType: 'indoor',
       ageAppropriate: true,
       whyRecommended: 'Leverages artistic strength for emotional development. Supports reflective thinking about self.'
+    });
+
+    return activities;
+  }
+
+  /**
+   * Get at-home activities that don't require formal classes or tutors
+   */
+  private getAtHomeActivities(ageGroup: string, age: number): ActivityRecommendation[] {
+    const activities: ActivityRecommendation[] = [];
+
+    activities.push({
+      id: 'reading-program',
+      name: 'Daily Reading & Storytelling',
+      category: 'At-Home Learning',
+      priority: 'HIGH',
+      targetAttributes: ['Knowledgeable', 'Communicator', 'Reflective', 'Open-minded'],
+      description: 'Parent-guided daily reading sessions with age-appropriate books, followed by discussion and storytelling.',
+      benefits: [
+        'Develops language and vocabulary',
+        'Builds imagination and creativity',
+        'Strengthens parent-child bond',
+        'Can be done anytime at home',
+        'No additional cost'
+      ],
+      frequency: 'Daily, 20-30 minutes',
+      estimatedCost: 'Free (library books) or minimal book costs',
+      estimatedCostUSD: { min: 0, max: 20 },
+      activityType: 'indoor',
+      ageAppropriate: true,
+      whyRecommended: 'Reading is fundamental for all learning. Daily practice at home builds strong foundations without needing formal classes.'
+    });
+
+    activities.push({
+      id: 'home-science',
+      name: 'Kitchen Science Experiments',
+      category: 'At-Home Learning',
+      priority: 'HIGH',
+      targetAttributes: ['Inquirer', 'Thinker', 'Knowledgeable', 'Risk-taker'],
+      description: 'Simple, safe science experiments using household items (baking soda volcanoes, water density, plant growth).',
+      benefits: [
+        'Hands-on learning of scientific concepts',
+        'Develops curiosity and inquiry',
+        'Uses readily available materials',
+        'Parent can supervise and guide',
+        'Makes learning fun'
+      ],
+      frequency: '2-3 times per week, 30-45 minutes',
+      estimatedCost: 'Minimal (household items)',
+      estimatedCostUSD: { min: 0, max: 15 },
+      activityType: 'indoor',
+      ageAppropriate: true,
+      whyRecommended: 'Develops scientific thinking through play. Parents can easily guide these activities using online resources.'
+    });
+
+    activities.push({
+      id: 'creative-play',
+      name: 'Creative Arts & Crafts',
+      category: 'At-Home Learning',
+      priority: 'MEDIUM',
+      targetAttributes: ['Communicator', 'Risk-taker', 'Reflective', 'Balanced'],
+      description: 'Open-ended art projects using basic supplies (drawing, painting, clay, collage, building with recycled materials).',
+      benefits: [
+        'Develops fine motor skills',
+        'Encourages creative expression',
+        'Low-cost materials',
+        'Therapeutic and relaxing',
+        'Builds confidence through creation'
+      ],
+      frequency: '3-4 times per week, 30-60 minutes',
+      estimatedCost: 'Minimal art supplies',
+      estimatedCostUSD: { min: 10, max: 30 },
+      activityType: 'indoor',
+      ageAppropriate: true,
+      whyRecommended: 'Art provides emotional expression and builds creativity. No formal instruction needed - let the child explore freely.'
+    });
+
+    if (age >= 4) {
+      activities.push({
+        id: 'outdoor-play',
+        name: 'Unstructured Outdoor Play',
+        category: 'At-Home Learning',
+        priority: 'HIGH',
+        targetAttributes: ['Risk-taker', 'Balanced', 'Caring', 'Principled'],
+        description: 'Daily outdoor playtime in park, garden, or yard - running, climbing, exploring nature, playing with neighbors.',
+        benefits: [
+          'Physical development and health',
+          'Social interaction with peers',
+          'Risk assessment and independence',
+          'Connection with nature',
+          'Free activity'
+        ],
+        frequency: 'Daily, 60-90 minutes',
+        estimatedCost: 'Free',
+        estimatedCostUSD: { min: 0, max: 0 },
+        activityType: 'outdoor',
+        ageAppropriate: true,
+        whyRecommended: 'Free play is essential for holistic development. Children learn social skills, physical coordination, and independence through play.'
+      });
+    }
+
+    activities.push({
+      id: 'family-projects',
+      name: 'Family Projects & Chores',
+      category: 'At-Home Learning',
+      priority: 'MEDIUM',
+      targetAttributes: ['Principled', 'Caring', 'Balanced', 'Thinker'],
+      description: 'Age-appropriate household responsibilities and family projects (cooking together, gardening, organizing, repairs).',
+      benefits: [
+        'Teaches responsibility and life skills',
+        'Builds self-reliance',
+        'Strengthens family bonds',
+        'Real-world problem solving',
+        'Sense of contribution'
+      ],
+      frequency: 'Daily tasks + weekly projects',
+      estimatedCost: 'Free',
+      estimatedCostUSD: { min: 0, max: 0 },
+      activityType: 'both',
+      ageAppropriate: true,
+      whyRecommended: 'Involving children in family life builds character, responsibility, and practical skills that formal classes cannot teach.'
+    });
+
+    activities.push({
+      id: 'music-dance-home',
+      name: 'Music & Dance at Home',
+      category: 'At-Home Learning',
+      priority: 'MEDIUM',
+      targetAttributes: ['Communicator', 'Balanced', 'Risk-taker', 'Open-minded'],
+      description: 'Playing music from different cultures, dancing freely, singing songs, making simple instruments.',
+      benefits: [
+        'Cultural exposure through music',
+        'Physical coordination and rhythm',
+        'Emotional expression',
+        'Can use streaming services',
+        'Family bonding activity'
+      ],
+      frequency: '3-4 times per week, 20-40 minutes',
+      estimatedCost: 'Free (streaming services)',
+      estimatedCostUSD: { min: 0, max: 10 },
+      activityType: 'indoor',
+      ageAppropriate: true,
+      whyRecommended: 'Music and movement are naturally engaging. Exposure to diverse music builds cultural awareness without formal lessons.'
     });
 
     return activities;
@@ -608,6 +1340,8 @@ export class ActivityRecommendationService {
         ],
         frequency: '1x per week, 45-60 minutes',
         estimatedCost: '$60-120 per month',
+        estimatedCostUSD: { min: 60, max: 120 },
+        activityType: 'indoor',
         ageAppropriate: true,
         whyRecommended: 'Builds on existing communication excellence while developing risk-taking and open-mindedness.'
       });
