@@ -4,6 +4,12 @@ export interface IStudent extends Document {
   name: string
   dateOfBirth: Date
   grade?: string
+  location?: {
+    address?: string
+    city?: string
+    latitude?: number
+    longitude?: number
+  }
   createdAt: Date
   updatedAt: Date
 }
@@ -22,6 +28,22 @@ const StudentSchema = new Schema<IStudent>(
     grade: {
       type: String,
       trim: true
+    },
+    location: {
+      address: {
+        type: String,
+        trim: true
+      },
+      city: {
+        type: String,
+        trim: true
+      },
+      latitude: {
+        type: Number
+      },
+      longitude: {
+        type: Number
+      }
     }
   },
   {

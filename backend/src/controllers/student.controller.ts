@@ -27,12 +27,13 @@ export const getStudentById = async (req: Request, res: Response) => {
 
 export const createStudent = async (req: Request, res: Response) => {
   try {
-    const { name, dateOfBirth, grade } = req.body
+    const { name, dateOfBirth, grade, location } = req.body
 
     const student = new Student({
       name,
       dateOfBirth,
-      grade
+      grade,
+      location
     })
 
     await student.save()
@@ -44,11 +45,17 @@ export const createStudent = async (req: Request, res: Response) => {
 
 export const updateStudent = async (req: Request, res: Response) => {
   try {
-    const { name, dateOfBirth, grade } = req.body
+    const { name, dateOfBirth, grade, location } = req.body
+
+    const updateData: any = {}
+    if (name !== undefined) updateData.name = name
+    if (dateOfBirth !== undefined) updateData.dateOfBirth = dateOfBirth
+    if (grade !== undefined) updateData.grade = grade
+    if (location !== undefined) updateData.location = location
 
     const student = await Student.findByIdAndUpdate(
       req.params.id,
-      { name, dateOfBirth, grade },
+      updateData,
       { new: true, runValidators: true }
     )
 
