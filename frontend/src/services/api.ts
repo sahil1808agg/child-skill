@@ -73,6 +73,7 @@ export interface LocationParams {
 export interface ActivityRecommendationsResponse {
   recommendations: ActivityRecommendation[];
   currentActivityEvaluations?: import('../types').CurrentActivityEvaluation[];
+  parentActions?: import('../types').ParentAction[];
 }
 
 export const fetchActivityRecommendations = async (
@@ -105,7 +106,8 @@ export const fetchActivityRecommendations = async (
   const response = await api.get(url);
   return {
     recommendations: response.data.recommendations,
-    currentActivityEvaluations: response.data.currentActivityEvaluations
+    currentActivityEvaluations: response.data.currentActivityEvaluations,
+    parentActions: response.data.parentActions
   };
 }
 
