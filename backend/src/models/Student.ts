@@ -9,6 +9,11 @@ export interface IStudent extends Document {
     city?: string
     latitude?: number
     longitude?: number
+    climateZone?: 'tropical' | 'subtropical' | 'temperate' | 'cold' | 'arid'
+  }
+  preferences?: {
+    monthlyBudgetUSD?: number
+    budgetFlexibility?: 'strict' | 'moderate' | 'flexible'
   }
   createdAt: Date
   updatedAt: Date
@@ -43,6 +48,21 @@ const StudentSchema = new Schema<IStudent>(
       },
       longitude: {
         type: Number
+      },
+      climateZone: {
+        type: String,
+        enum: ['tropical', 'subtropical', 'temperate', 'cold', 'arid']
+      }
+    },
+    preferences: {
+      monthlyBudgetUSD: {
+        type: Number,
+        min: 0
+      },
+      budgetFlexibility: {
+        type: String,
+        enum: ['strict', 'moderate', 'flexible'],
+        default: 'moderate'
       }
     }
   },
