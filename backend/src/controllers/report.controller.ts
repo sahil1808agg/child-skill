@@ -6,6 +6,7 @@ import unifiedParserService from '../services/unified-parser.service'
 import unifiedAnalysisService from '../services/unified-analysis.service'
 import summarizationService from '../services/summarization.service'
 import activityRecommendationService from '../services/activity-recommendation.service'
+import pdfGeneratorService from '../services/pdf-generator.service'
 
 export const uploadReport = async (req: Request, res: Response) => {
   try {
@@ -155,7 +156,7 @@ export const getActivityRecommendations = async (req: Request, res: Response) =>
 
     // Get location from query parameters
     // Can be: ?lat=28.6139&lng=77.2090 or ?address=Delhi or ?city=Delhi
-    const { lat, lng, latitude, longitude, address, city } = req.query
+    const { lat, lng, latitude, longitude, address, city, currentActivities } = req.query
 
     // Find the report
     const report = await Report.findById(reportId)
@@ -166,6 +167,19 @@ export const getActivityRecommendations = async (req: Request, res: Response) =>
 
     // Generate activity recommendations
     let recommendations = activityRecommendationService.generateRecommendations(report)
+
+    // Evaluate current activities if provided
+    let currentActivityEvaluations = null;
+    if (currentActivities) {
+      const activitiesList = Array.isArray(currentActivities)
+        ? currentActivities
+        : [currentActivities];
+
+      currentActivityEvaluations = activityRecommendationService.evaluateCurrentActivities(
+        report,
+        activitiesList as string[]
+      );
+    }
 
     // If location provided, enrich with venues
     let location: { latitude: number; longitude: number } | null = null;
@@ -211,7 +225,8 @@ export const getActivityRecommendations = async (req: Request, res: Response) =>
         latitude: location.latitude,
         longitude: location.longitude
       } : null,
-      recommendations
+      recommendations,
+      currentActivityEvaluations
     })
   } catch (error) {
     console.error('Error generating activity recommendations:', error)
@@ -234,5 +249,89 @@ export const getLocationAutocomplete = async (req: Request, res: Response) => {
   } catch (error) {
     console.error('Error getting location autocomplete:', error)
     res.status(500).json({ error: 'Failed to get location suggestions' })
+  }
+}
+
+export const downloadReportPDF = async (req: Request, res: Response) => {
+  try {
+    const { reportId } = req.params
+
+    // Fetch the report with student information
+    const report = await Report.findById(reportId).lean()
+    if (!report) {
+      return res.status(404).json({ error: 'Report not found' })
+    }
+
+    const student = await Student.findById(report.studentId).lean()
+    if (!student) {
+      return res.status(404).json({ error: 'Student not found' })
+    }
+
+    // Check if report has a summary
+    if (!report.summary) {
+      return res.status(400).json({ error: 'Report summary not yet generated' })
+    }
+
+    // Get recommendations if available
+    let recommendations = undefined
+    let currentActivityEvaluations = undefined
+    let location = undefined
+
+    // Try to get recommendations and location from request body (optional)
+    if (req.body.includeRecommendations) {
+      const { address, city, currentActivities } = req.body
+
+      // Generate recommendations
+      recommendations = activityRecommendationService.generateRecommendations(report)
+
+      // Evaluate current activities if provided
+      if (currentActivities && currentActivities.length > 0) {
+        currentActivityEvaluations = activityRecommendationService.evaluateCurrentActivities(
+          report,
+          currentActivities
+        )
+      }
+
+      // Get location if provided
+      if (address || city) {
+        const venueSearchService = require('../services/venue-search.service').default
+        const searchAddress = (address || city) as string
+        const locationData = await venueSearchService.geocodeLocation(searchAddress)
+
+        if (locationData) {
+          location = { address: searchAddress }
+          // Enrich with venues
+          recommendations = await activityRecommendationService.enrichWithVenues(
+            recommendations,
+            locationData.latitude,
+            locationData.longitude,
+            10000
+          )
+        }
+      }
+    }
+
+    // Prepare PDF data
+    const pdfData = {
+      studentName: student.name,
+      grade: report.grade || student.grade || 'Not specified',
+      reportDate: report.reportDate.toString(),
+      summary: {
+        overallPerformance: report.summary.overallPerformance,
+        keyStrengths: report.summary.keyStrengths,
+        areasNeedingAttention: report.summary.areasNeedingAttention,
+        teacherHighlights: report.summary.teacherHighlights
+      },
+      currentActivities: req.body.currentActivities || [],
+      currentActivityEvaluations,
+      recommendations,
+      location
+    }
+
+    // Generate and stream PDF
+    pdfGeneratorService.generateReportPDF(pdfData, res)
+  } catch (error) {
+    console.error('Error generating PDF:', error)
+    res.status(500).json({ error: 'Failed to generate PDF report' })
   }
 }

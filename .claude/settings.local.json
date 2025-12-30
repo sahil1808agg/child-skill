@@ -19,7 +19,27 @@
       "Bash(git add:*)",
       "Bash(git commit:*)",
       "Bash(git remote add:*)",
-      "Bash(git push:*)"
+      "Bash(git push:*)",
+      "Bash(npm install:*)",
+      "Bash(net start MongoDB)",
+      "Bash(net start \"MongoDB Server\")",
+      "Bash(netstat:*)",
+      "Bash(findstr:*)",
+      "Bash(taskkill:*)",
+      "Bash(node check-grade.js:*)",
+      "Bash(node:*)",
+      "Bash(move check-grade.js backend )",
+      "Bash(mongosh \"mongodb+srv://sahilthakur888:2WILa7k0FqkI5s3e@cluster0.xh8po.mongodb.net/enhance-your-child?retryWrites=true&w=majority\" --quiet --eval \"\nconst students = db.students.find\\(\\).toArray\\(\\);\nprint\\(''\\\\nStudents:''\\);\nstudents.forEach\\(s => print\\(s._id, s.name\\)\\);\n\nconst reports = db.reports.find\\(\\).toArray\\(\\);\nprint\\(''\\\\nReports:''\\);\nreports.forEach\\(r => print\\(r._id, ''Student:'', r.studentId, ''Grade:'', r.grade\\)\\);\n\")",
+      "Bash(mongosh \"mongodb+srv://sahilthakur888:2WILa7k0FqkI5s3e@cluster0.xh8po.mongodb.net/enhance-your-child?retryWrites=true&w=majority\" --quiet --eval \"db.reports.findOne\\({}, {summary: 1, grade: 1, reportType: 1, teacherComments: 1, ibSubjectAreas: 1}\\)\")",
+      "Bash(npm run build:*)",
+      "Bash(ping:*)",
+      "Bash(set PORT=5001)",
+      "Bash(start:*)",
+      "Bash(tasklist:*)",
+      "Bash(cmd /c \"taskkill /F /PID 14484\")",
+      "Bash(powershell -Command \"Stop-Process -Id 14484 -Force\")",
+      "Bash(timeout /t 2:*)",
+      "Bash(copy /b server.ts +,,)"
     ]
   }
 }
