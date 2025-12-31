@@ -15,6 +15,13 @@ export default function ReportsTab({ student, reports, onReportUploaded, onRepor
   const [uploadingFile, setUploadingFile] = useState(false)
   const [uploadProgress, setUploadProgress] = useState(0)
   const [downloadingPDF, setDownloadingPDF] = useState<string | null>(null)
+  const [showPDFModal, setShowPDFModal] = useState(false)
+  const [selectedReportForPDF, setSelectedReportForPDF] = useState<string | null>(null)
+  const [pdfOptions, setPDFOptions] = useState({
+    includeRecommendations: false,
+    address: '',
+    currentActivities: '' as string
+  })
   const fileInputRef = useRef<HTMLInputElement>(null)
 
   const getQuickSummary = (report: Report): string => {
@@ -107,18 +114,44 @@ export default function ReportsTab({ student, reports, onReportUploaded, onRepor
     }
   }
 
-  const handleDownloadPDF = async (reportId: string) => {
+  const handleDownloadPDF = (reportId: string) => {
+    setSelectedReportForPDF(reportId)
+    setShowPDFModal(true)
+    setPDFOptions({
+      includeRecommendations: false,
+      address: student.location?.address || '',
+      currentActivities: ''
+    })
+  }
+
+  const handleConfirmDownload = async () => {
+    if (!selectedReportForPDF) return
+
     try {
-      setDownloadingPDF(reportId)
-      await downloadReportPDF(reportId, {
-        includeRecommendations: false
+      setDownloadingPDF(selectedReportForPDF)
+      setShowPDFModal(false)
+
+      const currentActivitiesList = pdfOptions.currentActivities
+        ? pdfOptions.currentActivities.split(',').map(a => a.trim()).filter(a => a.length > 0)
+        : []
+
+      await downloadReportPDF(selectedReportForPDF, {
+        includeRecommendations: pdfOptions.includeRecommendations,
+        address: pdfOptions.includeRecommendations ? pdfOptions.address : undefined,
+        currentActivities: pdfOptions.includeRecommendations ? currentActivitiesList : undefined
       })
     } catch (error) {
       console.error('Error downloading PDF:', error)
       alert('Failed to download PDF. Please try again.')
     } finally {
       setDownloadingPDF(null)
+      setSelectedReportForPDF(null)
     }
+  }
+
+  const handleCancelDownload = () => {
+    setShowPDFModal(false)
+    setSelectedReportForPDF(null)
   }
 
   const sortedReports = [...reports].sort((a, b) => {
@@ -275,6 +308,81 @@ export default function ReportsTab({ student, reports, onReportUploaded, onRepor
             ))}
           </tbody>
         </table>
+      )}
+
+      {/* PDF Download Options Modal */}
+      {showPDFModal && (
+        <div className="modal-overlay" onClick={handleCancelDownload}>
+          <div className="modal-content" onClick={(e) => e.stopPropagation()}>
+            <h3>Download Report PDF</h3>
+
+            <div className="modal-section">
+              <label className="checkbox-label">
+                <input
+                  type="checkbox"
+                  checked={pdfOptions.includeRecommendations}
+                  onChange={(e) => setPDFOptions({
+                    ...pdfOptions,
+                    includeRecommendations: e.target.checked
+                  })}
+                />
+                <span>Include Activity Recommendations</span>
+              </label>
+              <p className="modal-hint">
+                Recommendations are personalized activity suggestions based on the report
+              </p>
+            </div>
+
+            {pdfOptions.includeRecommendations && (
+              <>
+                <div className="modal-section">
+                  <label htmlFor="pdf-address">Location (City or Address)</label>
+                  <input
+                    id="pdf-address"
+                    type="text"
+                    className="modal-input"
+                    placeholder="e.g., Hyderabad or Aparna Cyberzon, Hyderabad"
+                    value={pdfOptions.address}
+                    onChange={(e) => setPDFOptions({
+                      ...pdfOptions,
+                      address: e.target.value
+                    })}
+                  />
+                  <p className="modal-hint">
+                    Location helps find nearby venues for recommended activities
+                  </p>
+                </div>
+
+                <div className="modal-section">
+                  <label htmlFor="pdf-activities">Current Activities (Optional)</label>
+                  <input
+                    id="pdf-activities"
+                    type="text"
+                    className="modal-input"
+                    placeholder="e.g., Swimming, Piano, Reading Books (comma separated)"
+                    value={pdfOptions.currentActivities}
+                    onChange={(e) => setPDFOptions({
+                      ...pdfOptions,
+                      currentActivities: e.target.value
+                    })}
+                  />
+                  <p className="modal-hint">
+                    Activities your child is already enrolled in (helps avoid duplicates)
+                  </p>
+                </div>
+              </>
+            )}
+
+            <div className="modal-actions">
+              <button className="modal-btn cancel-btn" onClick={handleCancelDownload}>
+                Cancel
+              </button>
+              <button className="modal-btn confirm-btn" onClick={handleConfirmDownload}>
+                Download PDF
+              </button>
+            </div>
+          </div>
+        </div>
       )}
     </div>
   )
