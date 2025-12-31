@@ -319,6 +319,13 @@ export const downloadReportPDF = async (req: Request, res: Response) => {
   try {
     const { reportId } = req.params
 
+    console.log('=== PDF DOWNLOAD REQUEST ===');
+    console.log('Request body:', JSON.stringify(req.body, null, 2));
+    console.log('Include recommendations:', req.body.includeRecommendations);
+    console.log('Current activities:', req.body.currentActivities);
+    console.log('Current activities type:', typeof req.body.currentActivities);
+    console.log('Current activities length:', req.body.currentActivities?.length);
+
     // Fetch the report with student information
     const report = await Report.findById(reportId).lean()
     if (!report) {
