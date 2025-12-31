@@ -8,6 +8,10 @@ interface Props {
   latestReport: Report | null
 }
 
+interface ExpandedState {
+  [key: string]: boolean
+}
+
 export default function RecommendationsTab({ student, latestReport }: Props) {
   const [recommendations, setRecommendations] = useState<ActivityRecommendation[]>([])
   const [parentActions, setParentActions] = useState<ParentAction[]>([])
@@ -15,6 +19,21 @@ export default function RecommendationsTab({ student, latestReport }: Props) {
   const [currentActivities, setCurrentActivities] = useState<CurrentActivity[]>([])
   const [isLoadingRecommendations, setIsLoadingRecommendations] = useState(false)
   const [error, setError] = useState('')
+  const [expandedActivities, setExpandedActivities] = useState<ExpandedState>({})
+  const [expandedParentActions, setExpandedParentActions] = useState<ExpandedState>({})
+  const [expandedEvaluations, setExpandedEvaluations] = useState<ExpandedState>({})
+
+  const toggleActivity = (id: string) => {
+    setExpandedActivities(prev => ({ ...prev, [id]: !prev[id] }))
+  }
+
+  const toggleParentAction = (index: number) => {
+    setExpandedParentActions(prev => ({ ...prev, [index]: !prev[index] }))
+  }
+
+  const toggleEvaluation = (index: number) => {
+    setExpandedEvaluations(prev => ({ ...prev, [index]: !prev[index] }))
+  }
 
   // Load current activities on mount
   useEffect(() => {
@@ -139,46 +158,56 @@ export default function RecommendationsTab({ student, latestReport }: Props) {
               <div className="section-header">
                 <h3>📊 Current Activities Evaluation</h3>
                 <p className="section-subtitle-small">
-                  Assessment of {student.name}'s current activities based on their learning profile
+                  Assessment of {student.name}'s current activities
                 </p>
               </div>
               <div className="evaluations-grid">
-                {activityEvaluations.map((evaluation, index) => (
-                  <div key={index} className={`evaluation-card recommendation-${evaluation.recommendation}`}>
-                    <div className="evaluation-header">
-                      <h4>{evaluation.activityName}</h4>
-                      <span className={`evaluation-badge ${evaluation.recommendation}`}>
-                        {evaluation.recommendation === 'continue' && '✓ Continue'}
-                        {evaluation.recommendation === 'reconsider' && '⚠ Reconsider'}
-                        {evaluation.recommendation === 'stop' && '✕ Consider Stopping'}
-                      </span>
-                    </div>
-                    <div className="evaluation-alignment">
-                      <strong>Alignment Score:</strong>
-                      <div className="alignment-bar">
-                        <div
-                          className="alignment-fill"
-                          style={{ width: `${evaluation.alignment}%` }}
-                        />
+                {activityEvaluations.map((evaluation, index) => {
+                  const isExpanded = expandedEvaluations[index]
+                  return (
+                    <div key={index} className={`evaluation-card-compact recommendation-${evaluation.recommendation}`}>
+                      <div className="card-compact-header" onClick={() => toggleEvaluation(index)}>
+                        <div className="card-title-row">
+                          <h4>{evaluation.activityName}</h4>
+                          <button className="expand-btn" aria-label={isExpanded ? 'Collapse' : 'Expand'}>
+                            {isExpanded ? '−' : '+'}
+                          </button>
+                        </div>
+                        <div className="card-summary">
+                          <span className={`evaluation-badge ${evaluation.recommendation}`}>
+                            {evaluation.recommendation === 'continue' && '✓ Continue'}
+                            {evaluation.recommendation === 'reconsider' && '⚠ Reconsider'}
+                            {evaluation.recommendation === 'stop' && '✕ Stop'}
+                          </span>
+                          <div className="alignment-summary">
+                            <div className="alignment-bar-mini">
+                              <div className="alignment-fill" style={{ width: `${evaluation.alignment}%` }} />
+                            </div>
+                            <span className="alignment-score-mini">{evaluation.alignment}%</span>
+                          </div>
+                        </div>
                       </div>
-                      <span className="alignment-score">{evaluation.alignment}%</span>
+                      {isExpanded && (
+                        <div className="card-expanded-content">
+                          <div className="evaluation-reasoning">
+                            <strong>Reasoning:</strong>
+                            <p>{evaluation.reasoning}</p>
+                          </div>
+                          {evaluation.alternatives && evaluation.alternatives.length > 0 && (
+                            <div className="evaluation-alternatives">
+                              <strong>Suggested Alternatives:</strong>
+                              <ul>
+                                {evaluation.alternatives.map((alt, idx) => (
+                                  <li key={idx}>{alt}</li>
+                                ))}
+                              </ul>
+                            </div>
+                          )}
+                        </div>
+                      )}
                     </div>
-                    <div className="evaluation-reasoning">
-                      <strong>Reasoning:</strong>
-                      <p>{evaluation.reasoning}</p>
-                    </div>
-                    {evaluation.alternatives && evaluation.alternatives.length > 0 && (
-                      <div className="evaluation-alternatives">
-                        <strong>Suggested Alternatives:</strong>
-                        <ul>
-                          {evaluation.alternatives.map((alt, idx) => (
-                            <li key={idx}>{alt}</li>
-                          ))}
-                        </ul>
-                      </div>
-                    )}
-                  </div>
-                ))}
+                  )
+                })}
               </div>
             </div>
           )}
@@ -191,89 +220,106 @@ export default function RecommendationsTab({ student, latestReport }: Props) {
                 <p className="section-subtitle-small">
                   {student.location?.city || student.location?.address
                     ? 'Personalized recommendations with nearby venues'
-                    : 'Personalized recommendations based on latest report'}
+                    : 'Personalized recommendations'}
                 </p>
               </div>
               <div className="recommendations-grid">
-                {recommendations.map((activity) => (
-                  <div key={activity.id} className={`activity-card priority-${activity.priority.toLowerCase()}`}>
-                    <div className="activity-header">
-                      <div className="activity-title-section">
-                        <h4>{activity.name}</h4>
-                        <div className="activity-badges">
-                          {activity.recommendationType === 'improvement' && (
-                            <span className="rec-type-badge improvement">
-                              🎯 Area to Improve
-                            </span>
-                          )}
-                          {activity.recommendationType === 'strength' && (
-                            <span className="rec-type-badge strength">
-                              ⭐ Build on Strength
-                            </span>
-                          )}
-                          {activity.recommendationType === 'age-based' && (
-                            <span className="rec-type-badge age-based">
-                              👶 Age-Appropriate
-                            </span>
+                {recommendations.map((activity) => {
+                  const isExpanded = expandedActivities[activity.id]
+
+                  // Generate recommendation reasoning
+                  let recommendationReason = ''
+                  if (activity.recommendationType === 'improvement') {
+                    recommendationReason = `Recommended to improve ${activity.targetedAttributes?.join(', ') || 'key skills'}`
+                  } else if (activity.recommendationType === 'strength') {
+                    recommendationReason = `Recommended to build on ${student.name}'s strength in ${activity.targetedAttributes?.join(', ') || 'this area'}`
+                  } else if (activity.recommendationType === 'age-based') {
+                    recommendationReason = `Age-appropriate activity for ${student.name}'s developmental stage`
+                  }
+
+                  return (
+                    <div key={activity.id} className={`activity-card-compact priority-${activity.priority.toLowerCase()}`}>
+                      <div className="card-compact-header" onClick={() => toggleActivity(activity.id)}>
+                        <div className="card-title-row">
+                          <div className="title-with-badges">
+                            <h4>{activity.name}</h4>
+                            {activity.recommendationType === 'improvement' && (
+                              <span className="rec-type-badge improvement">🎯 Improvement</span>
+                            )}
+                            {activity.recommendationType === 'strength' && (
+                              <span className="rec-type-badge strength">⭐ Strength</span>
+                            )}
+                            {activity.recommendationType === 'age-based' && (
+                              <span className="rec-type-badge age-based">👶 Age-Based</span>
+                            )}
+                          </div>
+                          <button className="expand-btn" aria-label={isExpanded ? 'Collapse' : 'Expand'}>
+                            {isExpanded ? '−' : '+'}
+                          </button>
+                        </div>
+                        {recommendationReason && (
+                          <div className="recommendation-reason">
+                            {recommendationReason}
+                          </div>
+                        )}
+                        <div className="card-summary">
+                          <span className="quick-info-item">📅 {activity.frequency}</span>
+                          <span className="quick-info-item">💰 {activity.estimatedCost}</span>
+                          {activity.venues && activity.venues.length > 0 && (
+                            <span className="quick-info-item">📍 {activity.venues.length} venue{activity.venues.length !== 1 ? 's' : ''}</span>
                           )}
                         </div>
                       </div>
-                    </div>
-
-                    {activity.targetedAttributes && activity.targetedAttributes.length > 0 && (
-                      <div className="targeted-attributes">
-                        <strong>Focuses on:</strong> {activity.targetedAttributes.map(a =>
-                          a.charAt(0).toUpperCase() + a.slice(1)
-                        ).join(', ')}
-                      </div>
-                    )}
-
-                    <div className="activity-quick-info">
-                      <span className="quick-info-item">📅 {activity.frequency}</span>
-                      <span className="quick-info-item">💰 {activity.estimatedCost}</span>
-                    </div>
-
-                    <div className="activity-benefits-compact">
-                      <strong>Key Benefits:</strong>
-                      <ul>
-                        {activity.benefits.slice(0, 2).map((benefit, idx) => (
-                          <li key={idx}>{benefit}</li>
-                        ))}
-                      </ul>
-                    </div>
-
-                    {activity.venues && activity.venues.length > 0 && (
-                      <div className="venues-section-compact">
-                        <strong>📍 {activity.venues.length} Nearby Venue{activity.venues.length !== 1 ? 's' : ''}</strong>
-                        <div className="venues-list-compact">
-                          {activity.venues.slice(0, 2).map((venue) => (
-                            <div key={venue.placeId} className="venue-card-compact">
-                              <div className="venue-info">
-                                <span className="venue-name">{venue.name}</span>
-                                {venue.rating && (
-                                  <span className="venue-rating-compact">
-                                    ⭐ {venue.rating.toFixed(1)}
-                                  </span>
-                                )}
-                              </div>
-                              {venue.distance && (
-                                <span className="venue-distance-compact">{venue.distance}</span>
-                              )}
-                              <a
-                                href={`https://www.google.com/maps/search/?api=1&query=${venue.latitude},${venue.longitude}`}
-                                target="_blank"
-                                rel="noopener noreferrer"
-                                className="venue-directions-btn"
-                              >
-                                Get Directions
-                              </a>
+                      {isExpanded && (
+                        <div className="card-expanded-content">
+                          {activity.targetedAttributes && activity.targetedAttributes.length > 0 && (
+                            <div className="targeted-attributes">
+                              <strong>Focuses on:</strong> {activity.targetedAttributes.map(a =>
+                                a.charAt(0).toUpperCase() + a.slice(1)
+                              ).join(', ')}
                             </div>
-                          ))}
+                          )}
+                          <div className="activity-benefits">
+                            <strong>Benefits:</strong>
+                            <ul>
+                              {activity.benefits.map((benefit, idx) => (
+                                <li key={idx}>{benefit}</li>
+                              ))}
+                            </ul>
+                          </div>
+                          {activity.venues && activity.venues.length > 0 && (
+                            <div className="venues-section">
+                              <strong>📍 Nearby Venues:</strong>
+                              <div className="venues-list">
+                                {activity.venues.map((venue) => (
+                                  <div key={venue.placeId} className="venue-card">
+                                    <div className="venue-header">
+                                      <span className="venue-name">{venue.name}</span>
+                                      {venue.rating && (
+                                        <span className="venue-rating">⭐ {venue.rating.toFixed(1)}</span>
+                                      )}
+                                    </div>
+                                    {venue.distance && (
+                                      <span className="venue-distance">{venue.distance}</span>
+                                    )}
+                                    <a
+                                      href={`https://www.google.com/maps/search/?api=1&query=${venue.latitude},${venue.longitude}`}
+                                      target="_blank"
+                                      rel="noopener noreferrer"
+                                      className="venue-directions-btn"
+                                    >
+                                      Directions →
+                                    </a>
+                                  </div>
+                                ))}
+                              </div>
+                            </div>
+                          )}
                         </div>
-                      </div>
-                    )}
-                  </div>
-                ))}
+                      )}
+                    </div>
+                  )
+                })}
               </div>
             </div>
           )}
@@ -284,79 +330,108 @@ export default function RecommendationsTab({ student, latestReport }: Props) {
               <div className="section-header">
                 <h3>👨‍👩‍👧‍👦 Actions for Parents</h3>
                 <p className="section-subtitle-small">
-                  Simple, home-based activities you can do with {student.name} to support their growth
+                  Simple home activities to support {student.name}'s growth
                 </p>
               </div>
-              <div className="parent-actions-grid">
-                {parentActions.map((action, index) => (
-                  <div key={index} className={`parent-action-card priority-${action.priority.toLowerCase()} category-${action.category}`}>
-                    <div className="action-header">
-                      <div className="action-title-section">
+
+              {parentActions.map((action, index) => {
+                const isExpanded = expandedParentActions[index]
+                return (
+                  <div key={index} className={`parent-action-table-wrapper priority-${action.priority.toLowerCase()}`}>
+                    {/* Header with Title and Priority */}
+                    <div className="parent-action-header">
+                      <div className="header-left">
                         <h4>{action.title}</h4>
-                        <div className="action-badges">
-                          {action.category === 'improvement' && (
-                            <span className="action-badge improvement">
-                              📈 Area to Improve
-                            </span>
-                          )}
-                          {action.category === 'strength-maintenance' && (
-                            <span className="action-badge strength">
-                              ⭐ Maintain Strength
-                            </span>
-                          )}
-                          <span className={`priority-badge priority-${action.priority.toLowerCase()}`}>
-                            {action.priority}
-                          </span>
+                        <span className={`priority-badge-table priority-${action.priority.toLowerCase()}`}>
+                          {action.priority} Priority
+                        </span>
+                      </div>
+                      <button
+                        className="expand-btn-table"
+                        onClick={() => toggleParentAction(index)}
+                        aria-label={isExpanded ? 'Collapse details' : 'Expand details'}
+                      >
+                        {isExpanded ? 'Hide Details −' : 'Show Details +'}
+                      </button>
+                    </div>
+
+                    {/* Key Benefit Banner */}
+                    <div className="benefit-banner">
+                      <span className="benefit-label">Expected Outcome:</span>
+                      <strong>{action.expectedOutcome}</strong>
+                      <span className="timeline-badge">⏳ {action.timeToSeeResults}</span>
+                    </div>
+
+                    {/* Activities Table */}
+                    <div className="parent-actions-table-container">
+                      <table className="parent-actions-table">
+                        <thead>
+                          <tr>
+                            <th className="col-activity">Activity</th>
+                            <th className="col-frequency">Frequency</th>
+                            <th className="col-duration">Duration</th>
+                            <th className="col-actions">How-To</th>
+                          </tr>
+                        </thead>
+                        <tbody>
+                          {action.activities.map((activity, actIdx) => (
+                            <tr key={actIdx}>
+                              <td className="col-activity">
+                                <strong>{actIdx + 1}. {activity.activity}</strong>
+                              </td>
+                              <td className="col-frequency">
+                                <span className="frequency-badge">{activity.frequency}</span>
+                              </td>
+                              <td className="col-duration">
+                                <span className="duration-badge">{activity.duration}</span>
+                              </td>
+                              <td className="col-actions">
+                                {activity.tips && activity.tips.length > 0 && (
+                                  <button
+                                    className="tips-toggle-btn"
+                                    onClick={() => {
+                                      const key = `${index}-${actIdx}`
+                                      setExpandedParentActions(prev => ({
+                                        ...prev,
+                                        [key]: !prev[key]
+                                      }))
+                                    }}
+                                  >
+                                    {expandedParentActions[`${index}-${actIdx}`] ? '✓ Tips' : 'View Tips'}
+                                  </button>
+                                )}
+                              </td>
+                            </tr>
+                          ))}
+                        </tbody>
+                      </table>
+                    </div>
+
+                    {/* Tips sections (shown when toggled) */}
+                    {action.activities.map((activity, actIdx) => {
+                      const key = `${index}-${actIdx}`
+                      return expandedParentActions[key] && activity.tips && activity.tips.length > 0 ? (
+                        <div key={key} className="tips-expanded">
+                          <strong>💡 Tips for {activity.activity}:</strong>
+                          <ul>
+                            {activity.tips.map((tip, tipIdx) => (
+                              <li key={tipIdx}>{tip}</li>
+                            ))}
+                          </ul>
                         </div>
-                      </div>
-                      <div className="target-area">
-                        <strong>Target:</strong> {action.targetArea}
-                      </div>
-                    </div>
+                      ) : null
+                    })}
 
-                    <p className="action-description">{action.description}</p>
-
-                    <div className="activities-list">
-                      <h5>Activities:</h5>
-                      {action.activities.map((activity, actIdx) => (
-                        <div key={actIdx} className="activity-detail">
-                          <div className="activity-name-bar">
-                            <span className="activity-icon">🎯</span>
-                            <strong>{activity.activity}</strong>
-                          </div>
-                          <div className="activity-meta">
-                            <span className="meta-item">
-                              <span className="meta-label">⏰ Frequency:</span> {activity.frequency}
-                            </span>
-                            <span className="meta-item">
-                              <span className="meta-label">⏱️ Duration:</span> {activity.duration}
-                            </span>
-                          </div>
-                          <div className="activity-tips">
-                            <strong>💡 Tips:</strong>
-                            <ul>
-                              {activity.tips.map((tip, tipIdx) => (
-                                <li key={tipIdx}>{tip}</li>
-                              ))}
-                            </ul>
-                          </div>
-                        </div>
-                      ))}
-                    </div>
-
-                    <div className="action-outcomes">
-                      <div className="outcome-item">
-                        <strong>🎯 Expected Outcome:</strong>
-                        <p>{action.expectedOutcome}</p>
+                    {/* Expandable Description */}
+                    {isExpanded && (
+                      <div className="action-description-expanded">
+                        <strong>Why This Matters:</strong>
+                        <p>{action.description}</p>
                       </div>
-                      <div className="outcome-item">
-                        <strong>⏳ Time to See Results:</strong>
-                        <p>{action.timeToSeeResults}</p>
-                      </div>
-                    </div>
+                    )}
                   </div>
-                ))}
-              </div>
+                )
+              })}
             </div>
           )}
         </>
