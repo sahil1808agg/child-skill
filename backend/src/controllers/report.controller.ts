@@ -245,19 +245,27 @@ export const getActivityRecommendations = async (req: Request, res: Response) =>
       }
     )
 
+    // Parse current activities if provided
+    let activitiesList: string[] | undefined = undefined;
+    if (currentActivities) {
+      activitiesList = Array.isArray(currentActivities)
+        ? currentActivities as string[]
+        : [currentActivities as string];
+    }
+
     // Generate parent actions - home-based activities for parents
-    const parentActions = activityRecommendationService.generateParentActions(report)
+    // Pass current activities to avoid suggesting duplicate activities
+    const parentActions = activityRecommendationService.generateParentActions(
+      report,
+      activitiesList
+    )
 
     // Evaluate current activities if provided
     let currentActivityEvaluations = null;
-    if (currentActivities) {
-      const activitiesList = Array.isArray(currentActivities)
-        ? currentActivities
-        : [currentActivities];
-
+    if (activitiesList) {
       currentActivityEvaluations = activityRecommendationService.evaluateCurrentActivities(
         report,
-        activitiesList as string[]
+        activitiesList
       );
     }
 

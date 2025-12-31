@@ -360,17 +360,34 @@ export class ActivityRecommendationService {
    * Generate personalized "Actions for Parents" - home-based activities
    * parents can do with their child based on strengths and areas of improvement
    */
-  generateParentActions(report: any): ParentAction[] {
+  generateParentActions(report: any, currentActivities?: string[]): ParentAction[] {
     const analysis = this.analyzeReportForRecommendations(report);
     const age = this.estimateAge(report.grade);
     const actions: ParentAction[] = [];
 
     console.log('Generating parent actions for improvement and strength maintenance');
 
+    // Determine which attributes are already covered by current activities
+    const coveredAttributes = new Set<string>();
+    if (currentActivities && currentActivities.length > 0) {
+      console.log(`Analyzing ${currentActivities.length} current activities to avoid duplicates`);
+      for (const activity of currentActivities) {
+        const attributes = this.inferActivityAttributes(activity);
+        attributes.forEach(attr => coveredAttributes.add(attr));
+      }
+      console.log(`Attributes already covered by current activities:`, Array.from(coveredAttributes));
+    }
+
     // Generate actions for areas of improvement (prioritize top 3 weak areas)
     const topWeakAreas = analysis.weakAttributes.slice(0, 3);
 
     for (const weakArea of topWeakAreas) {
+      // Skip if this attribute is already covered by a current activity
+      if (coveredAttributes.has(weakArea.toLowerCase())) {
+        console.log(`Skipping parent action for ${weakArea} - already covered by current activities`);
+        continue;
+      }
+
       const action = this.getImprovementAction(weakArea, age, report);
       if (action) {
         actions.push(action);
@@ -381,15 +398,21 @@ export class ActivityRecommendationService {
     const topStrongAreas = analysis.strongAttributes.slice(0, 2);
 
     for (const strongArea of topStrongAreas) {
+      // Skip if this attribute is already covered by a current activity
+      if (coveredAttributes.has(strongArea.toLowerCase())) {
+        console.log(`Skipping parent action for ${strongArea} - already covered by current activities`);
+        continue;
+      }
+
       const action = this.getStrengthMaintenanceAction(strongArea, age, report);
       if (action) {
         actions.push(action);
       }
     }
 
-    // Add general foundational activities based on age
+    // Add general foundational activities based on age (if not too many activities already)
     const foundationalAction = this.getFoundationalAction(age, analysis);
-    if (foundationalAction) {
+    if (foundationalAction && actions.length < 5) {
       actions.push(foundationalAction);
     }
 
