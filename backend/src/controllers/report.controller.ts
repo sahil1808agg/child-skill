@@ -338,6 +338,7 @@ export const downloadReportPDF = async (req: Request, res: Response) => {
     // Get recommendations if available
     let recommendations = undefined
     let currentActivityEvaluations = undefined
+    let parentActions = undefined
     let location = undefined
 
     // Try to get recommendations and location from request body (optional)
@@ -346,6 +347,12 @@ export const downloadReportPDF = async (req: Request, res: Response) => {
 
       // Generate recommendations
       recommendations = activityRecommendationService.generateRecommendations(report)
+
+      // Generate parent actions - home-based activities
+      parentActions = activityRecommendationService.generateParentActions(
+        report,
+        currentActivities
+      )
 
       // Evaluate current activities if provided
       if (currentActivities && currentActivities.length > 0) {
@@ -388,6 +395,7 @@ export const downloadReportPDF = async (req: Request, res: Response) => {
       currentActivities: req.body.currentActivities || [],
       currentActivityEvaluations,
       recommendations,
+      parentActions,
       location
     }
 
