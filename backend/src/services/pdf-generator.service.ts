@@ -36,6 +36,21 @@ export interface ReportPDFData {
       phone?: string;
     }>;
   }>;
+  parentActions?: Array<{
+    category: string;
+    targetArea: string;
+    priority: string;
+    title: string;
+    description: string;
+    activities: Array<{
+      activity: string;
+      frequency: string;
+      duration: string;
+      tips: string[];
+    }>;
+    expectedOutcome: string;
+    timeToSeeResults: string;
+  }>;
   location?: {
     address: string;
   };
@@ -76,6 +91,10 @@ export class PDFGeneratorService {
 
     if (data.recommendations && data.recommendations.length > 0) {
       this.addRecommendations(doc, data);
+    }
+
+    if (data.parentActions && data.parentActions.length > 0) {
+      this.addParentActions(doc, data);
     }
 
     // Add footer to current (last) page before finalizing
@@ -585,6 +604,160 @@ export class PDFGeneratorService {
 
       // Separator line between activities
       if (index < data.recommendations!.length - 1) {
+        doc
+          .strokeColor('#e0e0e0')
+          .lineWidth(1)
+          .moveTo(50, doc.y + 5)
+          .lineTo(545, doc.y + 5)
+          .stroke()
+          .moveDown(1);
+      } else {
+        doc.moveDown(0.5);
+      }
+    });
+  }
+
+  private addParentActions(doc: PDFKit.PDFDocument, data: ReportPDFData): void {
+    // New page for parent actions
+    doc.addPage();
+
+    // Section title
+    doc
+      .fontSize(16)
+      .font('Helvetica-Bold')
+      .fillColor('#2c3e50')
+      .text('Actions for Parents', { underline: true })
+      .moveDown(0.5);
+
+    doc
+      .fontSize(10)
+      .font('Helvetica')
+      .fillColor('#7f8c8d')
+      .text(
+        `Home-based activities you can do with your child to support their development:`,
+        { align: 'justify' }
+      )
+      .moveDown(1);
+
+    data.parentActions!.forEach((action, index) => {
+      // Check if we need a new page
+      if (doc.y > 550) {
+        doc.addPage();
+      }
+
+      // Action title
+      doc
+        .fontSize(14)
+        .font('Helvetica-Bold')
+        .fillColor('#e67e22')
+        .text(`${index + 1}. ${action.title}`, { underline: false })
+        .moveDown(0.3);
+
+      // Category, Target Area, Priority
+      doc
+        .fontSize(9)
+        .font('Helvetica-Bold')
+        .fillColor('#7f8c8d')
+        .text(`Category: `, { continued: true })
+        .font('Helvetica')
+        .text(action.category, { continued: true })
+        .font('Helvetica-Bold')
+        .text('  |  Target Area: ', { continued: true })
+        .font('Helvetica')
+        .text(action.targetArea, { continued: true })
+        .font('Helvetica-Bold')
+        .text('  |  Priority: ', { continued: true })
+        .font('Helvetica')
+        .text(action.priority)
+        .moveDown(0.5);
+
+      // Description
+      doc
+        .fontSize(10)
+        .font('Helvetica')
+        .fillColor('#34495e')
+        .text(action.description, { align: 'justify', lineGap: 2 })
+        .moveDown(0.7);
+
+      // Activities
+      doc
+        .fontSize(10)
+        .font('Helvetica-Bold')
+        .fillColor('#2c3e50')
+        .text('Activities:')
+        .moveDown(0.3);
+
+      action.activities.forEach((activity, actIdx) => {
+        // Check if we need a new page
+        if (doc.y > 650) {
+          doc.addPage();
+        }
+
+        // Activity name
+        doc
+          .fontSize(10)
+          .font('Helvetica-Bold')
+          .fillColor('#3498db')
+          .text(`${actIdx + 1}. ${activity.activity}`, 70)
+          .moveDown(0.2);
+
+        // Frequency and Duration
+        doc
+          .fontSize(9)
+          .font('Helvetica')
+          .fillColor('#7f8c8d')
+          .text(`Frequency: ${activity.frequency}  |  Duration: ${activity.duration}`, 85)
+          .moveDown(0.3);
+
+        // Tips
+        if (activity.tips && activity.tips.length > 0) {
+          doc
+            .fontSize(9)
+            .font('Helvetica-Bold')
+            .fillColor('#27ae60')
+            .text('Tips:', 85)
+            .moveDown(0.2);
+
+          activity.tips.forEach(tip => {
+            doc
+              .fontSize(9)
+              .font('Helvetica')
+              .fillColor('#34495e')
+              .text(`• ${tip}`, 95, doc.y, { width: 450, lineGap: 1 });
+          });
+
+          doc.moveDown(0.4);
+        }
+      });
+
+      // Expected Outcome
+      if (action.expectedOutcome) {
+        doc
+          .fontSize(9)
+          .font('Helvetica-Bold')
+          .fillColor('#9b59b6')
+          .text('Expected Outcome: ', { continued: true })
+          .font('Helvetica')
+          .fillColor('#34495e')
+          .text(action.expectedOutcome, { align: 'justify', lineGap: 2 })
+          .moveDown(0.3);
+      }
+
+      // Time to See Results
+      if (action.timeToSeeResults) {
+        doc
+          .fontSize(9)
+          .font('Helvetica-Bold')
+          .fillColor('#e74c3c')
+          .text('Time to See Results: ', { continued: true })
+          .font('Helvetica')
+          .fillColor('#34495e')
+          .text(action.timeToSeeResults)
+          .moveDown(0.5);
+      }
+
+      // Separator line between actions
+      if (index < data.parentActions!.length - 1) {
         doc
           .strokeColor('#e0e0e0')
           .lineWidth(1)
