@@ -222,6 +222,104 @@ class ProductSearchService {
       );
     }
 
+    if (activityLower.includes('science') || activityLower.includes('experiment') || activityLower.includes('stem')) {
+      products.push(
+        {
+          id: 'sci1',
+          name: `Science Experiment Kit for ${ageCategory}`,
+          price: '₹899 - ₹1,999',
+          priceValue: 1399,
+          currency: 'INR',
+          url: 'https://www.amazon.in/s?k=science+kit+' + encodeURIComponent(ageCategory),
+          rating: 4.6,
+          reviewCount: 920,
+          source: 'amazon',
+          ageRange: ageCategory,
+          inStock: true
+        },
+        {
+          id: 'sci2',
+          name: `STEM Learning Activity Set`,
+          price: '₹799',
+          priceValue: 799,
+          currency: 'INR',
+          url: 'https://www.flipkart.com/search?q=stem+toys+' + encodeURIComponent(ageCategory),
+          rating: 4.4,
+          reviewCount: 680,
+          source: 'flipkart',
+          ageRange: ageCategory,
+          inStock: true
+        }
+      );
+    }
+
+    if (activityLower.includes('building') || activityLower.includes('engineering') || activityLower.includes('construction')) {
+      products.push(
+        {
+          id: 'eng1',
+          name: `Engineering Building Set for ${ageCategory}`,
+          price: '₹1,299 - ₹2,999',
+          priceValue: 1999,
+          currency: 'INR',
+          url: 'https://www.amazon.in/s?k=building+engineering+toys+' + encodeURIComponent(ageCategory),
+          rating: 4.7,
+          reviewCount: 1240,
+          source: 'amazon',
+          ageRange: ageCategory,
+          inStock: true
+        },
+        {
+          id: 'eng2',
+          name: `Construction & Mechanics Kit`,
+          price: '₹999',
+          priceValue: 999,
+          currency: 'INR',
+          url: 'https://www.flipkart.com/search?q=engineering+toys+' + encodeURIComponent(ageCategory),
+          rating: 4.5,
+          reviewCount: 890,
+          source: 'flipkart',
+          ageRange: ageCategory,
+          inStock: true
+        }
+      );
+    }
+
+    if (activityLower.includes('robot') || activityLower.includes('coding')) {
+      products.push(
+        {
+          id: 'rob1',
+          name: `Coding Robot Kit for ${ageCategory}`,
+          price: '₹2,499 - ₹4,999',
+          priceValue: 3499,
+          currency: 'INR',
+          url: 'https://www.amazon.in/s?k=coding+robot+' + encodeURIComponent(ageCategory),
+          rating: 4.8,
+          reviewCount: 560,
+          source: 'amazon',
+          ageRange: ageCategory,
+          inStock: true
+        }
+      );
+    }
+
+    if (activityLower.includes('math') || activityLower.includes('counting')) {
+      products.push(
+        {
+          id: 'math1',
+          name: `Math Learning Games for ${ageCategory}`,
+          price: '₹499 - ₹1,299',
+          priceValue: 799,
+          currency: 'INR',
+          url: 'https://www.amazon.in/s?k=math+learning+toys+' + encodeURIComponent(ageCategory),
+          rating: 4.4,
+          reviewCount: 750,
+          source: 'amazon',
+          ageRange: ageCategory,
+          inStock: true
+        }
+      );
+    }
+
     // Return limited results
     return products.slice(0, maxResults);
   }
@@ -235,7 +333,9 @@ class ProductSearchService {
       'puzzle', 'lego', 'block', 'book', 'reading', 'story',
       'art', 'craft', 'drawing', 'coloring', 'paint',
       'board game', 'game', 'toy', 'kit', 'set',
-      'instrument', 'music', 'building'
+      'instrument', 'music', 'building', 'science',
+      'engineering', 'experiment', 'stem', 'robot',
+      'coding', 'chess', 'writing', 'math', 'learning'
     ];
 
     return productKeywords.some(keyword => activityLower.includes(keyword));
