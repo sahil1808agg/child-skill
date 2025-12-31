@@ -191,9 +191,11 @@ MANDATORY COMPARISON FRAMEWORK:
 3. Identify 3-4 attributes where child EXCEEDS expectations (for Key Strengths)
 4. Identify 3-4 attributes where child is DEVELOPING or BELOW expectations (for Areas for Growth)
 
-CRITICAL RULES:
+CRITICAL RULES FOR EVIDENCE AND EXAMPLES:
 - NO STUDENT is perfect at all 10 IB attributes - you MUST identify areas for growth
-- Every point must include SPECIFIC EVIDENCE from the report
+- EVERY point MUST include SPECIFIC BEHAVIORS, ACTIONS, or EXAMPLES from the teacher comments
+- EVERY point must include DIRECT QUOTES from teacher comments (use quotation marks)
+- DO NOT just state grades or subject names - explain HOW the child demonstrates the attribute with concrete examples
 - Every point must EXPLICITLY mention which IB learner profile attribute it relates to
 - Compare behaviors to Grade ${gradeLevel} standards, not generic expectations
 - If evidence is limited for an attribute, note this as an area to observe/develop
@@ -207,44 +209,61 @@ Generate a comprehensive summary with:
    - Note 1 key area for continued development
    - Be honest and balanced in assessment
 
-2. KEY STRENGTHS (3-4 concise bullet points):
-   - Format: "[IB ATTRIBUTE] - [Specific evidence] compared to Grade ${gradeLevel} expectations"
-   - Example: "INQUIRER - Demonstrates curiosity beyond Grade 3 expectations; actively asks probing questions in Science and independently researches topics (Teacher: 'always engaged and curious')"
-   - Include specific subjects, grades, or teacher quotes as evidence
-   - Must show how child EXCEEDS typical Grade ${gradeLevel} development
+2. KEY STRENGTHS (3-4 detailed bullet points):
+   - Format: "[IB ATTRIBUTE] - [Specific behaviors and examples from teacher comments with direct quotes using ONLY single quotes]; [comparison to Grade ${gradeLevel} expectations]"
+   - MANDATORY: Extract specific behaviors, actions, and examples from the teacher comments that demonstrate this attribute
+   - MANDATORY: Include direct quotes from teacher comments using SINGLE QUOTES only (not double quotes)
+   - Example: "COMMUNICATOR - Actively participates in Hindi lessons, clearly expressing ideas and listening attentively to stories; confidently uses visual cues and body language (Teacher: 'communicates ideas clearly and attentively listening'); exceeds Grade EYP 3 expectations for expressive communication"
+   - Example: "INQUIRER - Asks probing questions in Science about plant life cycles and researches topics independently (Teacher: 'always engaged and curious'); shows inquiry skills typical of Grade 4 students"
+   - DO NOT write generic statements like "Excels in Hindi (A level)" - this is TOO VAGUE
+   - DO write specific examples of HOW they excel: what they do, how they behave, what skills they show
    - Each strength must reference a different IB learner profile attribute
+   - Keep each bullet 30-45 words for clarity and proper JSON formatting
 
-3. AREAS FOR GROWTH (3-4 bullet points):
-   - Format: "[IB ATTRIBUTE] - [Current evidence] and [What growth looks like at Grade ${gradeLevel}]"
-   - Example: "RISK-TAKER - Shows hesitation when facing challenging Math problems (B grade, teacher notes 'needs encouragement'); Grade 3 students should approach uncertainty with more determination and try new strategies independently"
+3. AREAS FOR GROWTH (3-4 detailed bullet points):
+   - Format: "[IB ATTRIBUTE] - [Specific current behaviors or gaps]; [What growth looks like at Grade ${gradeLevel}]"
+   - MANDATORY: Cite specific evidence from the report about what needs development
+   - Use SINGLE QUOTES for any teacher quotes (not double quotes)
+   - Example: "RISK-TAKER - Shows hesitation with challenging Math problems, waiting for teacher guidance (Teacher: 'needs encouragement'); Grade 3 students should approach uncertainty more independently"
+   - Example: "REFLECTIVE - Limited evidence of self-assessment in report; Grade EYP 3 students should begin thinking about learning and improvement with teacher support"
    - MUST identify specific IB attributes where development is needed
    - Reference the Grade ${gradeLevel} standards to explain growth targets
    - Be constructive but honest about developmental areas
-   - Look for: subjects with lower grades, teacher concerns, missing skills for grade level, behavioral observations
-   - If no explicit concerns exist, identify attributes with limited evidence or room for deeper development
+   - Look for: subjects with lower grades, teacher concerns, missing skills, behavioral observations, or attributes not mentioned
+   - Keep each bullet 25-40 words for proper JSON formatting
 
-4. TEACHER HIGHLIGHTS (2-3 bullet points):
-   - Extract MOST IMPORTANT teacher observations
+4. TEACHER HIGHLIGHTS (2-3 detailed bullet points):
+   - Extract MOST IMPORTANT specific observations and examples from teacher comments
    - Connect each to IB learner profile attributes
-   - Example: "Excels in early writing with excellent clarity and spacing (COMMUNICATOR attribute)"
-   - Must include specific examples from teacher comments
+   - MANDATORY: Include the actual behavior or skill described, not just the subject
+   - Use SINGLE QUOTES for teacher quotes (not double quotes)
+   - Example: "Early writing shows excellent letter formation, spacing, and direction (Teacher: 'early writing skills are a particular strength'); demonstrates COMMUNICATOR attribute"
+   - Example: "Cheerful and curious in Hindi lessons, actively participates and listens to stories; exemplifies INQUIRER and COMMUNICATOR attributes"
+   - DO NOT write vague statements - extract concrete examples and behaviors
+   - Keep each bullet 20-35 words for proper JSON formatting
 
-EXAMPLES OF GRADE-LEVEL COMPARATIVE ANALYSIS:
+EXAMPLES OF EXCELLENT DETAILED ANALYSIS (note: use single quotes for teacher quotes):
 
-✓ EXCELLENT: "THINKER - Demonstrates critical thinking beyond Grade 2 expectations; analyzes story characters' motivations in English and solves multi-step Math problems independently (A grades, teacher: 'exceptional analytical skills')"
+✓ EXCELLENT (STRENGTH): "COMMUNICATOR - Actively participates in Hindi lessons, clearly expressing ideas and using visual cues and body language; shows strong early writing with excellent letter formation and spacing (Teacher: 'communicates ideas clearly', 'early writing skills are a strength'); exceeds Grade EYP 3 expectations"
 
-✓ EXCELLENT: "PRINCIPLED - Developing consistency in homework completion typical for early Grade 3; teacher notes occasional forgetfulness with assignments; by mid-Grade 3, students should take full responsibility for work habits"
+✓ EXCELLENT (GROWTH AREA): "RISK-TAKER - Shows reluctance with unfamiliar Math problems, waiting for teacher demonstration (Teacher: 'needs encouragement with challenging tasks'); Grade 3 students should approach uncertainty more independently"
 
-✗ POOR: "Good at math" (no IB attribute, no comparison to grade expectations, no evidence)
+✗ POOR (TOO VAGUE): "Good at math" (no IB attribute, no comparison to grade expectations, no specific evidence or examples)
 
-✗ POOR: "Excelling in Hindi (A level)" (no IB attribute connection, doesn't explain HOW they excel compared to Grade 3 standards)
+✗ POOR (TOO GENERIC): "Excelling in Hindi (A level)" (no specific behaviors, no examples of HOW they excel, no teacher quotes)
+
+✗ POOR (MISSING EXAMPLES): "COMMUNICATOR - Excels in Hindi, meeting Grade EYP 3 IB expectations" (missing specific behaviors, teacher quotes, and examples of what communication skills are demonstrated)
 
 MANDATORY OUTPUT REQUIREMENTS:
 - You MUST fill all 4 sections (overallPerformance, keyStrengths, areasNeedingAttention, teacherHighlights)
 - areasNeedingAttention CANNOT be empty - every student has growth areas
 - EVERY bullet point must mention a specific IB learner profile attribute
-- EVERY bullet point must include concrete evidence from the report
+- EVERY bullet point must include concrete, specific examples and behaviors from the teacher comments
+- EVERY bullet point in keyStrengths should include teacher quotes using SINGLE QUOTES (not double quotes)
+- Keep bullets concise: keyStrengths 30-45 words, areasNeedingAttention 25-40 words, teacherHighlights 20-35 words
+- CRITICAL: Use ONLY single quotes for all teacher quotes within the text (example: Teacher: 'great work' NOT Teacher: "great work")
 - Respond with ONLY valid JSON (no markdown, no code blocks)
+- Ensure the JSON is complete and not truncated - all arrays and objects must be properly closed
 
 Format:
 {
@@ -258,7 +277,7 @@ Format:
       model: 'gemini-2.5-flash',
       generationConfig: {
         temperature: 0.5,
-        maxOutputTokens: 4096,  // Increased to prevent truncation
+        maxOutputTokens: 8192,  // Increased for detailed summaries with examples
         responseMimeType: 'application/json',  // Request JSON output directly
       }
     });
