@@ -1,6 +1,6 @@
 import { useState, useRef } from 'react'
 import { Report, Student } from '../../types'
-import { uploadReport, deleteReport } from '../../services/api'
+import { uploadReport, deleteReport, downloadReportPDF } from '../../services/api'
 import './ReportsTab.css'
 
 interface Props {
@@ -14,6 +14,7 @@ export default function ReportsTab({ student, reports, onReportUploaded, onRepor
   const [expandedReportId, setExpandedReportId] = useState<string | null>(null)
   const [uploadingFile, setUploadingFile] = useState(false)
   const [uploadProgress, setUploadProgress] = useState(0)
+  const [downloadingPDF, setDownloadingPDF] = useState<string | null>(null)
   const fileInputRef = useRef<HTMLInputElement>(null)
 
   const getQuickSummary = (report: Report): string => {
@@ -106,6 +107,20 @@ export default function ReportsTab({ student, reports, onReportUploaded, onRepor
     }
   }
 
+  const handleDownloadPDF = async (reportId: string) => {
+    try {
+      setDownloadingPDF(reportId)
+      await downloadReportPDF(reportId, {
+        includeRecommendations: false
+      })
+    } catch (error) {
+      console.error('Error downloading PDF:', error)
+      alert('Failed to download PDF. Please try again.')
+    } finally {
+      setDownloadingPDF(null)
+    }
+  }
+
   const sortedReports = [...reports].sort((a, b) => {
     return new Date(b.reportDate).getTime() - new Date(a.reportDate).getTime()
   })
@@ -177,6 +192,14 @@ export default function ReportsTab({ student, reports, onReportUploaded, onRepor
                       title="View/Hide Summary"
                     >
                       {expandedReportId === report._id ? '▼' : '👁'}
+                    </button>
+                    <button
+                      className="action-btn pdf-btn"
+                      onClick={() => handleDownloadPDF(report._id)}
+                      disabled={downloadingPDF === report._id}
+                      title="Download PDF"
+                    >
+                      {downloadingPDF === report._id ? '⏳' : '📄'}
                     </button>
                     <button
                       className="action-btn delete-btn"

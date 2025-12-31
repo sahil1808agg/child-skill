@@ -120,7 +120,7 @@
 }
 
 .actions-cell {
-  width: 120px;
+  width: 160px;
   text-align: center;
 }
 
@@ -138,6 +138,16 @@
 .view-btn:hover {
   background: #e3f2fd;
   transform: scale(1.1);
+}
+
+.pdf-btn:hover:not(:disabled) {
+  background: #e8f5e9;
+  transform: scale(1.1);
+}
+
+.pdf-btn:disabled {
+  cursor: not-allowed;
+  opacity: 0.6;
 }
 
 .delete-btn:hover {
