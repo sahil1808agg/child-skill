@@ -89,7 +89,7 @@ export default function StudentSelector({ onComplete }: StudentSelectorProps) {
   }
 
   const isValid = (): boolean => {
-    const hasStudent = selectedStudent !== null || (newStudentName && newStudentDOB)
+    const hasStudent = selectedStudent !== null || (!!newStudentName && !!newStudentDOB)
     const hasFiles = files.length > 0
     return hasStudent && hasFiles && !uploading
   }

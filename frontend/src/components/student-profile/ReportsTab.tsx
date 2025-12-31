@@ -10,7 +10,7 @@ interface Props {
   onReportDeleted: (reportId: string) => void
 }
 
-export default function ReportsTab({ student, reports, onReportUploaded, onReportDeleted }: Props) {
+export default function ReportsTab({ student, reports, onReportUploaded: _onReportUploaded, onReportDeleted }: Props) {
   const [expandedReportId, setExpandedReportId] = useState<string | null>(null)
   const [uploadingFile, setUploadingFile] = useState(false)
   const [uploadProgress, setUploadProgress] = useState(0)

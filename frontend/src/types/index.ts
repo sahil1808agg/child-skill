@@ -9,8 +9,23 @@ export interface Student {
     latitude?: number;
     longitude?: number;
   };
+  reportCount?: number;
   createdAt: string;
   updatedAt: string;
+}
+
+export interface LocationParams {
+  lat?: number;
+  lng?: number;
+  city?: string;
+  address?: string;
+}
+
+export interface LocationSuggestion {
+  description: string;
+  placeId: string;
+  mainText: string;
+  secondaryText: string;
 }
 
 export interface Subject {
