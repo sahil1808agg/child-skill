@@ -280,6 +280,14 @@ export const getActivityRecommendations = async (req: Request, res: Response) =>
       );
     }
 
+    // Enrich with product recommendations based on student age
+    const studentAge = activityRecommendationService.estimateAge(report.grade || 'EYP3');
+    console.log(`Enriching recommendations with product suggestions for age ${studentAge}`);
+    recommendations = await activityRecommendationService.enrichWithProducts(
+      recommendations,
+      studentAge
+    );
+
     res.json({
       reportId,
       location: location ? {
@@ -386,6 +394,13 @@ export const downloadReportPDF = async (req: Request, res: Response) => {
           )
         }
       }
+
+      // Enrich with product recommendations
+      const studentAge = activityRecommendationService.estimateAge(report.grade || 'EYP3');
+      recommendations = await activityRecommendationService.enrichWithProducts(
+        recommendations,
+        studentAge
+      );
     }
 
     // Prepare PDF data

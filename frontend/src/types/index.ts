@@ -144,6 +144,21 @@ export interface CurrentActivity {
   updatedAt: string;
 }
 
+export interface ProductRecommendation {
+  id: string;
+  name: string;
+  price: string;
+  priceValue: number;
+  currency: string;
+  url: string;
+  imageUrl?: string;
+  rating?: number;
+  reviewCount?: number;
+  source: 'amazon' | 'flipkart';
+  ageRange?: string;
+  inStock: boolean;
+}
+
 export interface ActivityRecommendation {
   id: string;
   name: string;
@@ -159,6 +174,7 @@ export interface ActivityRecommendation {
   recommendationType?: 'improvement' | 'strength' | 'age-based';
   targetedAttributes?: string[];
   venues?: Venue[];
+  products?: ProductRecommendation[];
 }
 
 export interface ParentAction {

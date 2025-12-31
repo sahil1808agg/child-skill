@@ -1,4 +1,5 @@
 import venueSearchService, { Venue } from './venue-search.service';
+import productSearchService, { ProductRecommendation } from './product-search.service';
 
 export interface ActivityRecommendation {
   id: string;
@@ -17,6 +18,7 @@ export interface ActivityRecommendation {
   recommendationType?: 'improvement' | 'strength' | 'age-based'; // Why this was recommended (computed during selection)
   targetedAttributes?: string[]; // Specific weak or strong attributes this addresses (computed during selection)
   venues?: Venue[]; // Nearby venues where this activity can be pursued
+  products?: ProductRecommendation[]; // E-commerce product recommendations for this activity
   regionalSuitability?: {
     climatePreference?: Array<'tropical' | 'subtropical' | 'temperate' | 'cold' | 'arid'>;
     requiresCoastal?: boolean;
@@ -304,6 +306,46 @@ export class ActivityRecommendationService {
     });
 
     return result.slice(0, recommendations.length); // Keep same count as input
+  }
+
+  /**
+   * Enrich recommendations with e-commerce product suggestions
+   */
+  async enrichWithProducts(
+    recommendations: ActivityRecommendation[],
+    studentAge: number
+  ): Promise<ActivityRecommendation[]> {
+    console.log(`Enriching recommendations with product suggestions for age ${studentAge}`);
+
+    const enrichedRecommendations = await Promise.all(
+      recommendations.map(async (rec) => {
+        try {
+          // Check if this activity has physical products
+          if (!productSearchService.hasPhysicalProducts(rec.name)) {
+            return rec;
+          }
+
+          // Search for products
+          const products = await productSearchService.searchProducts({
+            query: rec.name,
+            ageInMonths: studentAge * 12, // Convert age to months
+            maxResults: 3 // Limit to top 3 products
+          });
+
+          console.log(`Found ${products.length} products for ${rec.name}`);
+
+          return {
+            ...rec,
+            products
+          };
+        } catch (error) {
+          console.error(`Error searching products for ${rec.name}:`, error);
+          return rec; // Return recommendation without products if search fails
+        }
+      })
+    );
+
+    return enrichedRecommendations;
   }
 
   /**
@@ -2421,7 +2463,7 @@ export class ActivityRecommendationService {
    * EYP (Early Years Programme): ages 3-6
    * PYP (Primary Years Programme): ages 6-12
    */
-  private estimateAge(grade?: string): number {
+  public estimateAge(grade?: string): number {
     if (!grade) return 5;
 
     const gradeLower = grade.toLowerCase();
