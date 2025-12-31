@@ -12,7 +12,7 @@ export default function StudentProfile() {
   const [student, setStudent] = useState<Student | null>(null)
   const [reports, setReports] = useState<Report[]>([])
   const [loading, setLoading] = useState(true)
-  const [activeTab, setActiveTab] = useState<'reports' | 'activities' | 'recommendations'>('reports')
+  const [activeTab, setActiveTab] = useState<'reports' | 'activities' | 'recommendations'>('activities')
 
   useEffect(() => {
     if (id) {
@@ -36,7 +36,7 @@ export default function StudentProfile() {
     }
   }
 
-  const handleReportUploaded = (newReport: Report) => {
+  const handleReportUploaded = (_newReport: Report) => {
     // Refresh reports list
     if (id) {
       loadStudentData(id)
@@ -77,19 +77,19 @@ export default function StudentProfile() {
       {/* Tab Navigation */}
       <div className="profile-tabs">
         <button
+          className={`tab-btn ${activeTab === 'activities' ? 'active' : ''}`}
+          onClick={() => setActiveTab('activities')}
+        >
+          <span className="tab-icon">📝</span>
+          <span className="tab-label">Current Activities</span>
+        </button>
+        <button
           className={`tab-btn ${activeTab === 'reports' ? 'active' : ''}`}
           onClick={() => setActiveTab('reports')}
         >
           <span className="tab-icon">📄</span>
           <span className="tab-label">Reports</span>
           <span className="tab-count">{reports.length}</span>
-        </button>
-        <button
-          className={`tab-btn ${activeTab === 'activities' ? 'active' : ''}`}
-          onClick={() => setActiveTab('activities')}
-        >
-          <span className="tab-icon">📝</span>
-          <span className="tab-label">Current Activities</span>
         </button>
         <button
           className={`tab-btn ${activeTab === 'recommendations' ? 'active' : ''}`}
