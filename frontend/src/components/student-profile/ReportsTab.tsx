@@ -128,12 +128,17 @@ export default function ReportsTab({ student, reports, onReportUploaded, onRepor
     if (!selectedReportForPDF) return
 
     try {
+      console.log('PDF Options before download:', pdfOptions);
+      console.log('Current Activities String:', pdfOptions.currentActivities);
+
       setDownloadingPDF(selectedReportForPDF)
       setShowPDFModal(false)
 
       const currentActivitiesList = pdfOptions.currentActivities
         ? pdfOptions.currentActivities.split(',').map(a => a.trim()).filter(a => a.length > 0)
         : []
+
+      console.log('Current Activities List:', currentActivitiesList);
 
       await downloadReportPDF(selectedReportForPDF, {
         includeRecommendations: pdfOptions.includeRecommendations,

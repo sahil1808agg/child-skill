@@ -301,6 +301,8 @@ export class PDFGeneratorService {
   }
 
   private addCurrentActivities(doc: PDFKit.PDFDocument, data: ReportPDFData): void {
+    console.log(`✓ Adding Current Activities section with ${data.currentActivities!.length} activities`);
+
     // Check if we need a new page
     if (doc.y > 650) {
       doc.addPage();
