@@ -429,7 +429,12 @@ export class ActivityRecommendationService {
     // Add general foundational activities based on age (if not too many activities already)
     const foundationalAction = this.getFoundationalAction(age, analysis);
     if (foundationalAction && actions.length < 5) {
-      actions.push(foundationalAction);
+      // Check if foundational action has theme overlap with current activities
+      if (this.hasSignificantThemeOverlap(foundationalAction, coveredThemes)) {
+        console.log(`Skipping foundational action - activities have theme overlap with current activities`);
+      } else {
+        actions.push(foundationalAction);
+      }
     }
 
     // Sort by priority (HIGH > MEDIUM > LOW)
