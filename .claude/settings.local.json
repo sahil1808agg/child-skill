@@ -39,7 +39,11 @@
       "Bash(cmd /c \"taskkill /F /PID 14484\")",
       "Bash(powershell -Command \"Stop-Process -Id 14484 -Force\")",
       "Bash(timeout /t 2:*)",
-      "Bash(copy /b server.ts +,,)"
+      "Bash(copy /b server.ts +,,)",
+      "Bash(cat:*)",
+      "Bash(npx tsc:*)",
+      "Bash(timeout /t 5)",
+      "Bash(ls:*)"
     ]
   }
 }
