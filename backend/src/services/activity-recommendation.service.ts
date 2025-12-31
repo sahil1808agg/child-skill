@@ -367,15 +367,21 @@ export class ActivityRecommendationService {
 
     console.log('Generating parent actions for improvement and strength maintenance');
 
-    // Determine which attributes are already covered by current activities
+    // Determine which attributes and themes are already covered by current activities
     const coveredAttributes = new Set<string>();
+    const coveredThemes = new Set<string>();
     if (currentActivities && currentActivities.length > 0) {
       console.log(`Analyzing ${currentActivities.length} current activities to avoid duplicates`);
       for (const activity of currentActivities) {
         const attributes = this.inferActivityAttributes(activity);
         attributes.forEach(attr => coveredAttributes.add(attr));
+
+        // Extract activity themes (e.g., reading, sports, music, art)
+        const themes = this.extractActivityThemes(activity);
+        themes.forEach(theme => coveredThemes.add(theme));
       }
       console.log(`Attributes already covered by current activities:`, Array.from(coveredAttributes));
+      console.log(`Themes already covered by current activities:`, Array.from(coveredThemes));
     }
 
     // Generate actions for areas of improvement (prioritize top 3 weak areas)
@@ -390,6 +396,11 @@ export class ActivityRecommendationService {
 
       const action = this.getImprovementAction(weakArea, age, report);
       if (action) {
+        // Check if this parent action has significant theme overlap with current activities
+        if (this.hasSignificantThemeOverlap(action, coveredThemes)) {
+          console.log(`Skipping parent action for ${weakArea} - activities have theme overlap with current activities`);
+          continue;
+        }
         actions.push(action);
       }
     }
@@ -406,6 +417,11 @@ export class ActivityRecommendationService {
 
       const action = this.getStrengthMaintenanceAction(strongArea, age, report);
       if (action) {
+        // Check if this parent action has significant theme overlap with current activities
+        if (this.hasSignificantThemeOverlap(action, coveredThemes)) {
+          console.log(`Skipping parent action for ${strongArea} - activities have theme overlap with current activities`);
+          continue;
+        }
         actions.push(action);
       }
     }
@@ -1124,6 +1140,129 @@ export class ActivityRecommendationService {
     }
 
     return attributes;
+  }
+
+  /**
+   * Extract activity themes/types from activity name
+   * Themes represent the core activity type (e.g., reading, sports, music)
+   */
+  private extractActivityThemes(activityName: string): string[] {
+    const name = activityName.toLowerCase();
+    const themes: string[] = [];
+
+    // Reading/Books
+    if (name.includes('read') || name.includes('book') || name.includes('story') || name.includes('literature')) {
+      themes.push('reading');
+    }
+
+    // Sports/Physical
+    if (
+      name.includes('sport') || name.includes('soccer') || name.includes('basketball') ||
+      name.includes('swim') || name.includes('gymnastics') || name.includes('dance') ||
+      name.includes('karate') || name.includes('tennis') || name.includes('yoga') ||
+      name.includes('physical') || name.includes('exercise')
+    ) {
+      themes.push('sports');
+    }
+
+    // Music
+    if (
+      name.includes('music') || name.includes('piano') || name.includes('guitar') ||
+      name.includes('violin') || name.includes('drum') || name.includes('sing')
+    ) {
+      themes.push('music');
+    }
+
+    // Art/Creative
+    if (
+      name.includes('art') || name.includes('paint') || name.includes('draw') ||
+      name.includes('craft') || name.includes('sculpt')
+    ) {
+      themes.push('art');
+    }
+
+    // STEM/Science
+    if (
+      name.includes('science') || name.includes('math') || name.includes('coding') ||
+      name.includes('robot') || name.includes('engineering') || name.includes('stem') ||
+      name.includes('lego') || name.includes('experiment')
+    ) {
+      themes.push('stem');
+    }
+
+    // Language/Speaking
+    if (
+      name.includes('language') || name.includes('spanish') || name.includes('french') ||
+      name.includes('mandarin') || name.includes('conversation') || name.includes('debate')
+    ) {
+      themes.push('language');
+    }
+
+    // Nature/Outdoor
+    if (
+      name.includes('nature') || name.includes('outdoor') || name.includes('garden') ||
+      name.includes('hiking') || name.includes('exploration')
+    ) {
+      themes.push('nature');
+    }
+
+    // Drama/Theater
+    if (name.includes('drama') || name.includes('theater') || name.includes('acting')) {
+      themes.push('drama');
+    }
+
+    return themes;
+  }
+
+  /**
+   * Check if a parent action has significant theme overlap with current activities
+   * Returns true if the action should be filtered out
+   */
+  private hasSignificantThemeOverlap(action: ParentAction, coveredThemes: Set<string>): boolean {
+    if (coveredThemes.size === 0) {
+      return false; // No current activities, no overlap
+    }
+
+    // Define theme keywords for better detection
+    const themeKeywords: { [key: string]: string[] } = {
+      'reading': ['reading', 'read', 'book', 'story', 'stories', 'literature', 'library'],
+      'sports': ['sport', 'physical', 'exercise', 'running', 'jumping', 'soccer', 'basketball', 'swimming'],
+      'music': ['music', 'musical', 'piano', 'guitar', 'sing', 'song', 'instrument'],
+      'art': ['art', 'draw', 'paint', 'craft', 'creative'],
+      'stem': ['science', 'math', 'coding', 'engineering', 'experiment', 'robot'],
+      'language': ['language', 'spanish', 'french', 'conversation', 'vocabulary'],
+      'nature': ['nature', 'outdoor', 'garden', 'hiking', 'plants', 'animals'],
+      'drama': ['drama', 'theater', 'acting', 'performance']
+    };
+
+    // Extract themes from the parent action
+    const actionThemes = new Set<string>();
+
+    // Check activity titles, tips, description, and title for theme keywords
+    const fullText = `${action.title} ${action.description} ${action.activities.map((a: any) =>
+      `${a.activity} ${a.tips.join(' ')}`
+    ).join(' ')}`.toLowerCase();
+
+    // Check each covered theme
+    for (const theme of coveredThemes) {
+      const keywords = themeKeywords[theme] || [theme];
+
+      // Check if any keyword for this theme appears in the action text
+      for (const keyword of keywords) {
+        if (fullText.includes(keyword)) {
+          actionThemes.add(theme);
+          break; // Found a match for this theme, move to next theme
+        }
+      }
+    }
+
+    // If even 1 major theme overlaps, filter it out
+    if (actionThemes.size > 0) {
+      console.log(`  Theme overlap detected for "${action.title}":`, Array.from(actionThemes));
+      return true;
+    }
+
+    return false;
   }
 
   /**
