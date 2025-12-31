@@ -255,7 +255,7 @@ export const getActivityRecommendations = async (req: Request, res: Response) =>
 
     // Generate parent actions - home-based activities for parents
     // Pass current activities to avoid suggesting duplicate activities
-    const parentActions = activityRecommendationService.generateParentActions(
+    let parentActions = activityRecommendationService.generateParentActions(
       report,
       activitiesList
     )
@@ -285,6 +285,12 @@ export const getActivityRecommendations = async (req: Request, res: Response) =>
     console.log(`Enriching recommendations with product suggestions for age ${studentAge}`);
     recommendations = await activityRecommendationService.enrichWithProducts(
       recommendations,
+      studentAge
+    );
+
+    // Enrich parent actions with product recommendations
+    parentActions = await activityRecommendationService.enrichParentActionsWithProducts(
+      parentActions,
       studentAge
     );
 
@@ -399,6 +405,12 @@ export const downloadReportPDF = async (req: Request, res: Response) => {
       const studentAge = activityRecommendationService.estimateAge(report.grade || 'EYP3');
       recommendations = await activityRecommendationService.enrichWithProducts(
         recommendations,
+        studentAge
+      );
+
+      // Enrich parent actions with product recommendations
+      parentActions = await activityRecommendationService.enrichParentActionsWithProducts(
+        parentActions,
         studentAge
       );
     }
