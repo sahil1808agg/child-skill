@@ -52,6 +52,7 @@ export interface ParentAction {
   }>;
   expectedOutcome: string;
   timeToSeeResults: string;
+  products?: ProductRecommendation[]; // E-commerce product recommendations for this action
 }
 
 export class ActivityRecommendationService {
@@ -346,6 +347,53 @@ export class ActivityRecommendationService {
     );
 
     return enrichedRecommendations;
+  }
+
+  /**
+   * Enrich parent actions with e-commerce product suggestions
+   */
+  async enrichParentActionsWithProducts(
+    parentActions: ParentAction[],
+    studentAge: number
+  ): Promise<ParentAction[]> {
+    console.log(`Enriching parent actions with product suggestions for age ${studentAge}`);
+
+    const enrichedActions = await Promise.all(
+      parentActions.map(async (action) => {
+        try {
+          // Check if this action's activities have physical products
+          const hasProducts = action.activities.some(act =>
+            productSearchService.hasPhysicalProducts(act.activity)
+          );
+
+          if (!hasProducts) {
+            return action;
+          }
+
+          // Combine all activity names to search for products
+          const activityNames = action.activities.map(a => a.activity).join(' ');
+
+          // Search for products
+          const products = await productSearchService.searchProducts({
+            query: activityNames,
+            ageInMonths: studentAge * 12,
+            maxResults: 3
+          });
+
+          console.log(`Found ${products.length} products for parent action: ${action.title}`);
+
+          return {
+            ...action,
+            products
+          };
+        } catch (error) {
+          console.error(`Error searching products for parent action ${action.title}:`, error);
+          return action;
+        }
+      })
+    );
+
+    return enrichedActions;
   }
 
   /**

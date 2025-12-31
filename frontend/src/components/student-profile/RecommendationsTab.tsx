@@ -464,6 +464,41 @@ export default function RecommendationsTab({ student, latestReport }: Props) {
                         <p>{action.description}</p>
                       </div>
                     )}
+
+                    {/* Product Recommendations for Parent Actions */}
+                    {action.products && action.products.length > 0 && (
+                      <div className="products-section">
+                        <strong>🛒 Recommended Products:</strong>
+                        <div className="products-list">
+                          {action.products.map((product) => (
+                            <div key={product.id} className="product-card">
+                              <div className="product-header">
+                                <span className="product-name">{product.name}</span>
+                                <span className={`product-source ${product.source}`}>
+                                  {product.source === 'amazon' ? '📦 Amazon' : '🛍️ Flipkart'}
+                                </span>
+                              </div>
+                              <div className="product-details">
+                                <span className="product-price">{product.price}</span>
+                                {product.rating && (
+                                  <span className="product-rating">
+                                    ⭐ {product.rating.toFixed(1)} ({product.reviewCount})
+                                  </span>
+                                )}
+                              </div>
+                              <a
+                                href={product.url}
+                                target="_blank"
+                                rel="noopener noreferrer"
+                                className="product-buy-btn"
+                              >
+                                View on {product.source === 'amazon' ? 'Amazon' : 'Flipkart'} →
+                              </a>
+                            </div>
+                          ))}
+                        </div>
+                      </div>
+                    )}
                   </div>
                 )
               })}
