@@ -384,10 +384,15 @@ export class ActivityRecommendationService {
       console.log(`Themes already covered by current activities:`, Array.from(coveredThemes));
     }
 
-    // Generate actions for areas of improvement (prioritize top 3 weak areas)
-    const topWeakAreas = analysis.weakAttributes.slice(0, 3);
+    // Generate actions for areas of improvement
+    // Keep trying weak attributes until we get at least 2 actions (or run out of attributes)
+    const minImprovementActions = 2;
+    let weakAreaIndex = 0;
 
-    for (const weakArea of topWeakAreas) {
+    while (actions.length < minImprovementActions && weakAreaIndex < analysis.weakAttributes.length) {
+      const weakArea = analysis.weakAttributes[weakAreaIndex];
+      weakAreaIndex++;
+
       // Skip if this attribute is already covered by a current activity
       if (coveredAttributes.has(weakArea.toLowerCase())) {
         console.log(`Skipping parent action for ${weakArea} - already covered by current activities`);
@@ -405,10 +410,16 @@ export class ActivityRecommendationService {
       }
     }
 
-    // Generate actions to maintain strengths (top 2 strong areas)
-    const topStrongAreas = analysis.strongAttributes.slice(0, 2);
+    // Generate actions to maintain strengths
+    // Try to get at least 1 strength action
+    const minStrengthActions = 1;
+    let strongAreaIndex = 0;
+    const strengthActionsStart = actions.length;
 
-    for (const strongArea of topStrongAreas) {
+    while ((actions.length - strengthActionsStart) < minStrengthActions && strongAreaIndex < analysis.strongAttributes.length) {
+      const strongArea = analysis.strongAttributes[strongAreaIndex];
+      strongAreaIndex++;
+
       // Skip if this attribute is already covered by a current activity
       if (coveredAttributes.has(strongArea.toLowerCase())) {
         console.log(`Skipping parent action for ${strongArea} - already covered by current activities`);
@@ -450,6 +461,9 @@ export class ActivityRecommendationService {
    * Get improvement action for a specific weak attribute
    */
   private getImprovementAction(attribute: string, age: number, report: any): ParentAction | null {
+    // Capitalize first letter to match actionMap keys
+    const capitalizedAttribute = attribute.charAt(0).toUpperCase() + attribute.slice(1).toLowerCase();
+
     const actionMap: { [key: string]: () => ParentAction } = {
       'Communicator': () => ({
         category: 'improvement',
@@ -902,13 +916,16 @@ export class ActivityRecommendationService {
       })
     };
 
-    return actionMap[attribute] ? actionMap[attribute]() : null;
+    return actionMap[capitalizedAttribute] ? actionMap[capitalizedAttribute]() : null;
   }
 
   /**
    * Get action to maintain and celebrate a strength
    */
   private getStrengthMaintenanceAction(attribute: string, age: number, report: any): ParentAction | null {
+    // Capitalize first letter to match attributeDescriptions keys
+    const capitalizedAttribute = attribute.charAt(0).toUpperCase() + attribute.slice(1).toLowerCase();
+
     // Simplified strength maintenance - just acknowledge and encourage continued practice
     const attributeDescriptions: { [key: string]: string } = {
       'Communicator': 'communication and expression',
@@ -923,21 +940,21 @@ export class ActivityRecommendationService {
       'Open-minded': 'open-mindedness'
     };
 
-    if (!attributeDescriptions[attribute]) return null;
+    if (!attributeDescriptions[capitalizedAttribute]) return null;
 
     return {
       category: 'strength-maintenance',
-      targetArea: attributeDescriptions[attribute],
+      targetArea: attributeDescriptions[capitalizedAttribute],
       priority: 'LOW',
-      title: `Celebrate & Maintain: ${attribute}`,
-      description: `Your child shows strength in ${attributeDescriptions[attribute]}. Continue to nurture this through encouragement and opportunities.`,
+      title: `Celebrate & Maintain: ${capitalizedAttribute}`,
+      description: `Your child shows strength in ${attributeDescriptions[capitalizedAttribute]}. Continue to nurture this through encouragement and opportunities.`,
       activities: [
         {
           activity: 'Recognize and Praise',
           frequency: 'When you notice it',
           duration: '1-2 minutes',
           tips: [
-            `Point out when they demonstrate ${attribute} qualities`,
+            `Point out when they demonstrate ${capitalizedAttribute} qualities`,
             'Be specific: "I noticed how you..." instead of generic praise',
             'Let them know you value this strength',
             'Share examples with other family members'
@@ -948,7 +965,7 @@ export class ActivityRecommendationService {
           frequency: 'Regularly',
           duration: 'Varies',
           tips: [
-            `Create situations where they can use their ${attribute} strength`,
+            `Create situations where they can use their ${capitalizedAttribute} strength`,
             'Let them lead in areas where they excel',
             'Challenge them to grow even stronger',
             'Connect this strength to other learning areas'
@@ -1230,7 +1247,7 @@ export class ActivityRecommendationService {
 
     // Define theme keywords for better detection
     const themeKeywords: { [key: string]: string[] } = {
-      'reading': ['reading', 'read', 'book', 'story', 'stories', 'literature', 'library'],
+      'reading': ['reading', 'read', 'book', 'story', 'stories', 'literature', 'library', 'literacy'],
       'sports': ['sport', 'physical', 'exercise', 'running', 'jumping', 'soccer', 'basketball', 'swimming'],
       'music': ['music', 'musical', 'piano', 'guitar', 'sing', 'song', 'instrument'],
       'art': ['art', 'draw', 'paint', 'craft', 'creative'],
@@ -1240,30 +1257,45 @@ export class ActivityRecommendationService {
       'drama': ['drama', 'theater', 'acting', 'performance']
     };
 
-    // Extract themes from the parent action
-    const actionThemes = new Set<string>();
-
-    // Check activity titles, tips, description, and title for theme keywords
-    const fullText = `${action.title} ${action.description} ${action.activities.map((a: any) =>
-      `${a.activity} ${a.tips.join(' ')}`
-    ).join(' ')}`.toLowerCase();
+    // Count how many activities in this parent action are related to covered themes
+    let themeMatchCount = 0;
+    const titleDescText = `${action.title} ${action.description}`.toLowerCase();
 
     // Check each covered theme
     for (const theme of coveredThemes) {
       const keywords = themeKeywords[theme] || [theme];
 
-      // Check if any keyword for this theme appears in the action text
+      // Check if theme appears in title/description (strong indicator)
+      let inTitleOrDesc = false;
       for (const keyword of keywords) {
-        if (fullText.includes(keyword)) {
-          actionThemes.add(theme);
-          break; // Found a match for this theme, move to next theme
+        if (titleDescText.includes(keyword)) {
+          inTitleOrDesc = true;
+          break;
+        }
+      }
+
+      if (inTitleOrDesc) {
+        // Theme is central to this action - definitely filter it
+        console.log(`  Theme overlap detected for "${action.title}": ${theme} in title/description`);
+        return true;
+      }
+
+      // Count how many activities mention this theme
+      for (const activity of action.activities) {
+        const activityText = `${activity.activity}`.toLowerCase();
+        for (const keyword of keywords) {
+          if (activityText.includes(keyword)) {
+            themeMatchCount++;
+            break; // Count this activity once per theme
+          }
         }
       }
     }
 
-    // If even 1 major theme overlaps, filter it out
-    if (actionThemes.size > 0) {
-      console.log(`  Theme overlap detected for "${action.title}":`, Array.from(actionThemes));
+    // Filter only if more than half of the activities are theme-related
+    const themeOverlapThreshold = Math.ceil(action.activities.length / 2);
+    if (themeMatchCount >= themeOverlapThreshold) {
+      console.log(`  Theme overlap detected for "${action.title}": ${themeMatchCount}/${action.activities.length} activities overlap`);
       return true;
     }
 
