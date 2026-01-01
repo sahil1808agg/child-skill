@@ -8,7 +8,7 @@ export interface ProductRecommendation {
   imageUrl?: string;
   rating?: number;
   reviewCount?: number;
-  source: 'amazon' | 'flipkart';
+  source: 'amazon' | 'flipkart' | 'meesho' | 'firstcry' | 'snapdeal' | 'myntra' | 'pepperfry';
   ageRange?: string;
   inStock: boolean;
 }
@@ -89,6 +89,32 @@ class ProductSearchService {
           source: 'flipkart',
           ageRange: ageCategory,
           inStock: true
+        },
+        {
+          id: 'pz3',
+          name: `Premium Puzzle Set for Kids`,
+          price: '₹299',
+          priceValue: 299,
+          currency: 'INR',
+          url: 'https://www.meesho.com/puzzles-' + encodeURIComponent(ageCategory),
+          rating: 4.2,
+          reviewCount: 620,
+          source: 'meesho',
+          ageRange: ageCategory,
+          inStock: true
+        },
+        {
+          id: 'pz4',
+          name: `Brain Development Puzzle Games`,
+          price: '₹549',
+          priceValue: 549,
+          currency: 'INR',
+          url: 'https://www.firstcry.com/search?q=puzzles+' + encodeURIComponent(ageCategory),
+          rating: 4.6,
+          reviewCount: 980,
+          source: 'firstcry',
+          ageRange: ageCategory,
+          inStock: true
         }
       );
     }
@@ -118,6 +144,32 @@ class ProductSearchService {
           rating: 4.4,
           reviewCount: 1500,
           source: 'flipkart',
+          ageRange: ageCategory,
+          inStock: true
+        },
+        {
+          id: 'lg3',
+          name: `Creative Building Blocks Kit`,
+          price: '₹599',
+          priceValue: 599,
+          currency: 'INR',
+          url: 'https://www.firstcry.com/search?q=building+blocks+' + encodeURIComponent(ageCategory),
+          rating: 4.5,
+          reviewCount: 2100,
+          source: 'firstcry',
+          ageRange: ageCategory,
+          inStock: true
+        },
+        {
+          id: 'lg4',
+          name: `Budget Building Blocks Set`,
+          price: '₹399',
+          priceValue: 399,
+          currency: 'INR',
+          url: 'https://www.snapdeal.com/search?keyword=building+blocks+' + encodeURIComponent(ageCategory),
+          rating: 4.1,
+          reviewCount: 890,
+          source: 'snapdeal',
           ageRange: ageCategory,
           inStock: true
         }
@@ -151,6 +203,32 @@ class ProductSearchService {
           source: 'flipkart',
           ageRange: ageCategory,
           inStock: true
+        },
+        {
+          id: 'bk3',
+          name: `Story Books Bundle for Kids`,
+          price: '₹249',
+          priceValue: 249,
+          currency: 'INR',
+          url: 'https://www.meesho.com/kids-books-' + encodeURIComponent(ageCategory),
+          rating: 4.3,
+          reviewCount: 750,
+          source: 'meesho',
+          ageRange: ageCategory,
+          inStock: true
+        },
+        {
+          id: 'bk4',
+          name: `Premium Children's Book Collection`,
+          price: '₹599',
+          priceValue: 599,
+          currency: 'INR',
+          url: 'https://www.firstcry.com/search?q=books+' + encodeURIComponent(ageCategory),
+          rating: 4.7,
+          reviewCount: 1950,
+          source: 'firstcry',
+          ageRange: ageCategory,
+          inStock: true
         }
       );
     }
@@ -182,6 +260,32 @@ class ProductSearchService {
           source: 'flipkart',
           ageRange: ageCategory,
           inStock: true
+        },
+        {
+          id: 'art3',
+          name: `Creative Art Supplies Bundle`,
+          price: '₹199',
+          priceValue: 199,
+          currency: 'INR',
+          url: 'https://www.meesho.com/art-craft-' + encodeURIComponent(ageCategory),
+          rating: 4.0,
+          reviewCount: 520,
+          source: 'meesho',
+          ageRange: ageCategory,
+          inStock: true
+        },
+        {
+          id: 'art4',
+          name: `Premium Drawing & Painting Set`,
+          price: '₹799',
+          priceValue: 799,
+          currency: 'INR',
+          url: 'https://www.firstcry.com/search?q=art+craft+' + encodeURIComponent(ageCategory),
+          rating: 4.5,
+          reviewCount: 1150,
+          source: 'firstcry',
+          ageRange: ageCategory,
+          inStock: true
         }
       );
     }
@@ -200,6 +304,32 @@ class ProductSearchService {
           source: 'amazon',
           ageRange: ageCategory,
           inStock: true
+        },
+        {
+          id: 'bg2',
+          name: `Family Board Game Collection`,
+          price: '₹699',
+          priceValue: 699,
+          currency: 'INR',
+          url: 'https://www.flipkart.com/search?q=board+games+kids+' + encodeURIComponent(ageCategory),
+          rating: 4.4,
+          reviewCount: 1120,
+          source: 'flipkart',
+          ageRange: ageCategory,
+          inStock: true
+        },
+        {
+          id: 'bg3',
+          name: `Strategy Board Games Set`,
+          price: '₹899',
+          priceValue: 899,
+          currency: 'INR',
+          url: 'https://www.firstcry.com/search?q=board+games+' + encodeURIComponent(ageCategory),
+          rating: 4.5,
+          reviewCount: 980,
+          source: 'firstcry',
+          ageRange: ageCategory,
+          inStock: true
         }
       );
     }
@@ -216,6 +346,32 @@ class ProductSearchService {
           rating: 4.5,
           reviewCount: 1650,
           source: 'amazon',
+          ageRange: ageCategory,
+          inStock: true
+        },
+        {
+          id: 'toy2',
+          name: `Learning & Development Toy Set`,
+          price: '₹899',
+          priceValue: 899,
+          currency: 'INR',
+          url: 'https://www.firstcry.com/search?q=educational+toys+' + encodeURIComponent(ageCategory),
+          rating: 4.6,
+          reviewCount: 1880,
+          source: 'firstcry',
+          ageRange: ageCategory,
+          inStock: true
+        },
+        {
+          id: 'toy3',
+          name: `Interactive Learning Toys`,
+          price: '₹599',
+          priceValue: 599,
+          currency: 'INR',
+          url: 'https://www.snapdeal.com/search?keyword=educational+toys+' + encodeURIComponent(ageCategory),
+          rating: 4.2,
+          reviewCount: 720,
+          source: 'snapdeal',
           ageRange: ageCategory,
           inStock: true
         }
@@ -249,6 +405,32 @@ class ProductSearchService {
           source: 'flipkart',
           ageRange: ageCategory,
           inStock: true
+        },
+        {
+          id: 'sci3',
+          name: `Educational STEM Kit for Kids`,
+          price: '₹999',
+          priceValue: 999,
+          currency: 'INR',
+          url: 'https://www.firstcry.com/search?q=science+stem+kit+' + encodeURIComponent(ageCategory),
+          rating: 4.7,
+          reviewCount: 1200,
+          source: 'firstcry',
+          ageRange: ageCategory,
+          inStock: true
+        },
+        {
+          id: 'sci4',
+          name: `Budget Science Experiment Set`,
+          price: '₹599',
+          priceValue: 599,
+          currency: 'INR',
+          url: 'https://www.snapdeal.com/search?keyword=science+kit+' + encodeURIComponent(ageCategory),
+          rating: 4.1,
+          reviewCount: 450,
+          source: 'snapdeal',
+          ageRange: ageCategory,
+          inStock: true
         }
       );
     }
@@ -280,6 +462,32 @@ class ProductSearchService {
           source: 'flipkart',
           ageRange: ageCategory,
           inStock: true
+        },
+        {
+          id: 'eng3',
+          name: `Advanced Building & Engineering Kit`,
+          price: '₹1,499',
+          priceValue: 1499,
+          currency: 'INR',
+          url: 'https://www.firstcry.com/search?q=engineering+building+' + encodeURIComponent(ageCategory),
+          rating: 4.6,
+          reviewCount: 1050,
+          source: 'firstcry',
+          ageRange: ageCategory,
+          inStock: true
+        },
+        {
+          id: 'eng4',
+          name: `Mechanical Construction Toy Set`,
+          price: '₹799',
+          priceValue: 799,
+          currency: 'INR',
+          url: 'https://www.snapdeal.com/search?keyword=engineering+toys+' + encodeURIComponent(ageCategory),
+          rating: 4.3,
+          reviewCount: 680,
+          source: 'snapdeal',
+          ageRange: ageCategory,
+          inStock: true
         }
       );
     }
@@ -296,6 +504,32 @@ class ProductSearchService {
           rating: 4.8,
           reviewCount: 560,
           source: 'amazon',
+          ageRange: ageCategory,
+          inStock: true
+        },
+        {
+          id: 'rob2',
+          name: `Programmable Robot Learning Kit`,
+          price: '₹2,999',
+          priceValue: 2999,
+          currency: 'INR',
+          url: 'https://www.flipkart.com/search?q=coding+robot+' + encodeURIComponent(ageCategory),
+          rating: 4.6,
+          reviewCount: 420,
+          source: 'flipkart',
+          ageRange: ageCategory,
+          inStock: true
+        },
+        {
+          id: 'rob3',
+          name: `STEM Robotics Kit for Kids`,
+          price: '₹3,499',
+          priceValue: 3499,
+          currency: 'INR',
+          url: 'https://www.firstcry.com/search?q=robot+coding+' + encodeURIComponent(ageCategory),
+          rating: 4.7,
+          reviewCount: 380,
+          source: 'firstcry',
           ageRange: ageCategory,
           inStock: true
         }
@@ -316,12 +550,89 @@ class ProductSearchService {
           source: 'amazon',
           ageRange: ageCategory,
           inStock: true
+        },
+        {
+          id: 'math2',
+          name: `Interactive Math Learning Kit`,
+          price: '₹699',
+          priceValue: 699,
+          currency: 'INR',
+          url: 'https://www.firstcry.com/search?q=math+learning+' + encodeURIComponent(ageCategory),
+          rating: 4.5,
+          reviewCount: 890,
+          source: 'firstcry',
+          ageRange: ageCategory,
+          inStock: true
+        },
+        {
+          id: 'math3',
+          name: `Fun Math Games & Activities`,
+          price: '₹599',
+          priceValue: 599,
+          currency: 'INR',
+          url: 'https://www.flipkart.com/search?q=math+toys+' + encodeURIComponent(ageCategory),
+          rating: 4.3,
+          reviewCount: 620,
+          source: 'flipkart',
+          ageRange: ageCategory,
+          inStock: true
         }
       );
     }
 
-    // Return limited results
-    return products.slice(0, maxResults);
+    // Return best products across all platforms
+    return this.selectBestProducts(products, maxResults);
+  }
+
+  /**
+   * Select the best products across all platforms based on ratings, reviews, and diversity
+   */
+  private selectBestProducts(products: ProductRecommendation[], maxResults: number): ProductRecommendation[] {
+    if (products.length === 0) return [];
+
+    // Calculate quality score for each product
+    const scoredProducts = products.map(product => {
+      // Quality score based on rating (weighted 60%) and review count (weighted 40%)
+      const ratingScore = (product.rating || 0) / 5.0; // Normalize to 0-1
+      const reviewScore = Math.min((product.reviewCount || 0) / 2000, 1.0); // Normalize, cap at 2000 reviews
+      const qualityScore = (ratingScore * 0.6) + (reviewScore * 0.4);
+
+      return {
+        product,
+        qualityScore
+      };
+    });
+
+    // Sort by quality score (highest first)
+    scoredProducts.sort((a, b) => b.qualityScore - a.qualityScore);
+
+    // Select top products while ensuring source diversity
+    const selectedProducts: ProductRecommendation[] = [];
+    const sourceCount: Record<string, number> = {};
+
+    for (const { product } of scoredProducts) {
+      if (selectedProducts.length >= maxResults) break;
+
+      const currentSourceCount = sourceCount[product.source] || 0;
+
+      // Prefer diversity: limit products from same source to 2 if we have enough total products
+      if (currentSourceCount < 2 || selectedProducts.length < maxResults - 1) {
+        selectedProducts.push(product);
+        sourceCount[product.source] = currentSourceCount + 1;
+      }
+    }
+
+    // If we still need more products and skipped some due to diversity rules, add them
+    if (selectedProducts.length < maxResults) {
+      for (const { product } of scoredProducts) {
+        if (selectedProducts.length >= maxResults) break;
+        if (!selectedProducts.includes(product)) {
+          selectedProducts.push(product);
+        }
+      }
+    }
+
+    return selectedProducts;
   }
 
   /**
