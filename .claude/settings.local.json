@@ -43,7 +43,10 @@
       "Bash(cat:*)",
       "Bash(npx tsc:*)",
       "Bash(timeout /t 5)",
-      "Bash(ls:*)"
+      "Bash(ls:*)",
+      "Bash(del test-product-diversity.js)",
+      "Bash(del nul)",
+      "Bash(rm:*)"
     ]
   }
 }
