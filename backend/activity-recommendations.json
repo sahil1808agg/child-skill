@@ -1,0 +1,39 @@
+{
+  "student": {
+    "name": "Reyansh Aggarwal",
+    "age": 5,
+    "grade": "3D",
+    "reportType": "IB EYP"
+  },
+  "evaluationRubric": {
+    "categories": [
+      "IB Alignment",
+      "Instructor Quality",
+      "Safety & Environment",
+      "Age Appropriateness",
+      "Individual Fit",
+      "Practical Considerations"
+    ]
+  },
+  "recommendedActivities": {
+    "highPriority": [
+      {
+        "category": "Physical Risk-Taking",
+        "activities": ["Gymnastics", "Swimming", "Multi-Sport", "Rock Climbing"],
+        "targetAttributes": ["Risk-taker", "Balanced"]
+      },
+      {
+        "category": "Cultural Exposure",
+        "activities": ["World Music", "Language Classes", "Cultural Dance"],
+        "targetAttributes": ["Open-minded", "Knowledgeable"]
+      }
+    ],
+    "mediumPriority": [
+      {
+        "category": "STEM/Inquiry",
+        "activities": ["Science Exploration", "Nature Programs", "Building/Engineering"],
+        "targetAttributes": ["Inquirer", "Knowledgeable", "Thinker"]
+      }
+    ]
+  }
+}
