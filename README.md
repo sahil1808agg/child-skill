@@ -129,21 +129,15 @@ Create a `.env` file in the `backend` directory:
 cp .env.example .env
 ```
 
-Edit `.env` and add your configuration:
+Edit `.env` and add your API keys (see `.env.example` for the required variables).
 
-```
-PORT=5000
-MONGODB_URI=mongodb://localhost:27017/enhance-your-child
-OPENAI_API_KEY=your_openai_api_key_here
-GOOGLE_API_KEY=your_google_gemini_api_key_here
-GOOGLE_PLACES_API_KEY=your_google_places_api_key_here
-NODE_ENV=development
-```
-
-**API Key Notes:**
-- **OpenAI API Key**: Required for intelligent report parsing. Without it, the system uses a basic pattern-matching fallback.
-- **Google API Key**: Required for AI-powered report summarization via Gemini. Without it, the system uses rule-based summarization.
-- **Google Places API Key**: Optional. Enables venue search for activity recommendations. Without it, venue suggestions are disabled.
+**Required Environment Variables:**
+- `PORT` - Server port (default: 5000)
+- `MONGODB_URI` - MongoDB connection string
+- `OPENAI_API_KEY` - For intelligent report parsing (falls back to pattern-matching if not provided)
+- `GOOGLE_API_KEY` - For AI-powered summarization via Gemini (falls back to rule-based if not provided)
+- `GOOGLE_PLACES_API_KEY` - For venue search (optional - venue suggestions disabled if not provided)
+- `NODE_ENV` - Environment (development/production)
 
 ### 5. Start MongoDB
 
