@@ -6,3 +6,16 @@ uploads/*
 !uploads/.gitkeep
 .DS_Store
 *.log
+
+# Claude Code settings (may contain sensitive data)
+.claude/
+
+# Test files
+*.test.pdf
+test-report*.pdf
+test-*.js
+*test*.json
+
+# Personal data files
+*_Action_Plan.md
+*_Evaluation.md
