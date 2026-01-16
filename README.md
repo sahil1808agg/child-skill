@@ -1,16 +1,72 @@
 # Enhance Your Child
 
-A web application to track student progress over time by analyzing report cards, identifying strengths and areas for improvement, and visualizing academic performance.
+A comprehensive child development platform that analyzes school report cards and provides personalized activity recommendations, venue suggestions, and actionable guidance for parents to support their child's growth.
+
+## What This Application Does
+
+**Enhance Your Child** transforms school report cards into actionable insights for parents. It:
+
+1. **Processes Report Cards** - Upload PDF or image-based report cards; the system extracts and structures the data automatically
+2. **Analyzes Performance** - Identifies strengths, areas for growth, and tracks progress over time using AI-powered analysis
+3. **Recommends Activities** - Suggests personalized extracurricular activities based on your child's specific needs and development areas
+4. **Finds Nearby Venues** - Locates classes, programs, and facilities near you where your child can pursue recommended activities
+5. **Suggests Products** - Recommends age-appropriate educational products from multiple e-commerce platforms
+6. **Guides Parents** - Provides specific home-based activities parents can do with their child, including frequency, duration, and expected outcomes
+7. **Generates Reports** - Creates comprehensive PDF reports summarizing everything for easy reference
 
 ## Features
 
-- **Report Upload**: Upload PDF or image-based report cards
+### Report Processing
+- **Multi-Format Support**: Upload PDF or image-based report cards
 - **OCR Processing**: Automatically extract text from PDFs and images using Tesseract.js
 - **AI-Powered Parsing**: Use OpenAI GPT-4 to extract structured data from report cards
+- **IB Curriculum Support**: Full support for IB PYP (Primary Years Programme) standards-based reports with learning continuum indicators (Beginning/Developing/Achieving/Excelling)
+- **Traditional Reports**: Also supports traditional grade-based report cards (A-F, percentages)
+
+### Analysis & Insights
+- **AI-Powered Summarization**: Uses Google Gemini to generate comprehensive report summaries
+- **IB Learner Profile Comparison**: Compares student performance against grade-level IB Learner Profile standards (Inquirer, Thinker, Communicator, etc.)
 - **Progress Tracking**: Visualize student performance over multiple years
 - **Trend Analysis**: Identify improving, declining, and stable subjects
-- **Strength & Weakness Analysis**: Automatically identify areas of strength and improvement
-- **Interactive Dashboard**: View student profiles with charts and historical data
+- **Strength & Growth Areas**: Automatically identify areas of strength and areas needing attention
+
+### Activity Recommendations
+- **Personalized Suggestions**: 3-5 targeted activity recommendations based on report analysis
+- **Budget-Aware**: Considers family budget with flexible cost ranges and currency conversion
+- **Climate-Appropriate**: Filters activities based on your climate zone (tropical, temperate, cold, etc.)
+- **Age-Appropriate**: Activities matched to child's developmental stage
+- **Diverse Categories**: Physical activities, STEM programs, creative arts, cultural activities, mindfulness, and at-home activities
+- **Current Activity Evaluation**: Analyzes existing activities and recommends whether to continue, reconsider, or stop
+
+### Venue Discovery
+- **Google Places Integration**: Find nearby venues for recommended activities
+- **Location Autocomplete**: Easy location search with address suggestions
+- **Venue Details**: Ratings, reviews, distance, phone numbers, and websites
+- **Multi-Activity Support**: Searches for gymnastics, swimming, music classes, STEM centers, and more
+
+### Product Recommendations
+- **Multi-Platform Search**: Products from Amazon, Flipkart, Meesho, FirstCry, Snapdeal, and more
+- **Age-Appropriate**: Products matched to child's age group
+- **Category Coverage**: Puzzles, books, art supplies, STEM kits, robotics, educational toys, and more
+- **Quality Scoring**: Products ranked by ratings and reviews
+
+### Parent Action Plans
+- **Home-Based Activities**: Specific activities parents can do at home
+- **Structured Guidance**: Frequency, duration, and step-by-step tips
+- **Expected Outcomes**: What improvement to expect and timeline
+- **Product Links**: Related products to support each activity
+
+### PDF Report Generation
+- **Comprehensive Reports**: Professional PDF with all analysis and recommendations
+- **Report Summary**: Overall performance, strengths, and growth areas
+- **Activity Recommendations**: Full details with venues and costs
+- **Parent Actions**: Complete home activity guide
+- **Easy Sharing**: Download and share with family or tutors
+
+### Interactive Dashboard
+- View all students and their progress
+- Student profiles with charts and historical data
+- Track multiple children
 
 ## Tech Stack
 
@@ -27,14 +83,21 @@ A web application to track student progress over time by analyzing report cards,
 - MongoDB with Mongoose
 - Tesseract.js for OCR
 - pdf-parse for PDF processing
-- OpenAI API for intelligent report parsing
+- PDFKit for PDF generation
 - Multer for file uploads
+
+### AI & APIs
+- OpenAI GPT-4 for intelligent report parsing
+- Google Gemini for report summarization and analysis
+- Google Places API for venue search and location services
 
 ## Prerequisites
 
 - Node.js (v18 or higher)
 - MongoDB (local or cloud instance)
-- OpenAI API key (optional, for enhanced parsing)
+- OpenAI API key (for report parsing)
+- Google API key (for Gemini AI summarization)
+- Google Places API key (for venue search - optional)
 
 ## Installation
 
@@ -72,10 +135,15 @@ Edit `.env` and add your configuration:
 PORT=5000
 MONGODB_URI=mongodb://localhost:27017/enhance-your-child
 OPENAI_API_KEY=your_openai_api_key_here
+GOOGLE_API_KEY=your_google_gemini_api_key_here
+GOOGLE_PLACES_API_KEY=your_google_places_api_key_here
 NODE_ENV=development
 ```
 
-If you don't have an OpenAI API key, the system will use a fallback parser with basic pattern matching.
+**API Key Notes:**
+- **OpenAI API Key**: Required for intelligent report parsing. Without it, the system uses a basic pattern-matching fallback.
+- **Google API Key**: Required for AI-powered report summarization via Gemini. Without it, the system uses rule-based summarization.
+- **Google Places API Key**: Optional. Enables venue search for activity recommendations. Without it, venue suggestions are disabled.
 
 ### 5. Start MongoDB
 
@@ -128,20 +196,49 @@ npm start
 
 ## Usage
 
-1. **Upload a Report**: Click "Upload Report" and select a PDF or image of a report card
-2. **Enter Student Details**: Provide student name and date of birth
-3. **Automatic Processing**: The system will:
-   - Extract text using OCR
-   - Parse the report card data
-   - Create or update student profile
-   - Analyze trends and patterns
+### Step 1: Upload a Report
+- Click "Upload Report" and select a PDF or image of a report card
+- The system automatically detects if it's an IB or traditional report
 
-4. **View Dashboard**: See all students and their progress
-5. **Student Profile**: Click on a student to view:
-   - Performance trends over time
-   - Strengths and areas for improvement
-   - Subject-wise progress charts
-   - Complete report history
+### Step 2: Enter Details
+- Provide student name and date of birth
+- Select or create a student profile
+- Enter your location for venue recommendations
+- Optionally specify budget preferences
+
+### Step 3: Add Current Activities (Optional)
+- List any activities your child is currently enrolled in
+- The system will evaluate if they align with your child's development needs
+
+### Step 4: Automatic Processing
+The system will:
+- Extract text using OCR
+- Parse the report card data (IB or traditional format)
+- Generate an AI-powered summary with strengths and growth areas
+- Create personalized activity recommendations
+- Find nearby venues for each recommended activity
+- Suggest relevant educational products
+- Create parent action plans with home activities
+
+### Step 5: Review Recommendations
+- View the comprehensive analysis
+- See activity recommendations with priority levels
+- Browse nearby venues with ratings and contact info
+- Review suggested products from multiple platforms
+- Get specific guidance on home-based activities
+
+### Step 6: Download PDF Report
+- Generate a professional PDF with all recommendations
+- Share with family members, tutors, or educators
+
+### Step 7: Track Progress
+- View the dashboard to see all students
+- Click on a student to view:
+  - Performance trends over time
+  - Strengths and areas for improvement
+  - Subject-wise progress charts
+  - Complete report history
+  - Historical recommendations
 
 ## API Endpoints
 
@@ -163,23 +260,42 @@ npm start
 child_skill/
 ├── frontend/
 │   ├── src/
-│   │   ├── components/     # Reusable components
-│   │   ├── pages/          # Page components
-│   │   ├── services/       # API services
-│   │   ├── types/          # TypeScript types
-│   │   ├── App.tsx         # Main app component
-│   │   └── main.tsx        # Entry point
+│   │   ├── components/
+│   │   │   ├── wizard/              # Report upload wizard steps
+│   │   │   └── student-profile/     # Student profile tabs
+│   │   ├── pages/
+│   │   │   ├── Dashboard.tsx        # Main dashboard
+│   │   │   ├── StudentProfile.tsx   # Student detail view
+│   │   │   ├── ReportWizard.tsx     # Multi-step report upload
+│   │   │   └── UploadReport.tsx     # Simple upload page
+│   │   ├── services/                # API services
+│   │   ├── types/                   # TypeScript types
+│   │   ├── App.tsx                  # Main app component
+│   │   └── main.tsx                 # Entry point
 │   └── package.json
 │
 ├── backend/
 │   ├── src/
-│   │   ├── controllers/    # Request handlers
-│   │   ├── models/         # Database models
-│   │   ├── routes/         # API routes
-│   │   ├── services/       # Business logic
-│   │   ├── middleware/     # Express middleware
-│   │   └── server.ts       # Server entry point
-│   ├── uploads/            # Uploaded files
+│   │   ├── controllers/             # Request handlers
+│   │   ├── models/
+│   │   │   ├── Student.ts           # Student schema
+│   │   │   ├── Report.ts            # Report schema (IB + traditional)
+│   │   │   └── CurrentActivity.ts   # Current activities schema
+│   │   ├── routes/                  # API routes
+│   │   ├── services/
+│   │   │   ├── ocr.service.ts                    # OCR text extraction
+│   │   │   ├── parser.service.ts                 # Traditional report parsing
+│   │   │   ├── ib-parser.service.ts              # IB report parsing
+│   │   │   ├── unified-analysis.service.ts      # Progress analysis
+│   │   │   ├── summarization.service.ts         # AI summarization (Gemini)
+│   │   │   ├── activity-recommendation.service.ts # Activity recommendations
+│   │   │   ├── venue-search.service.ts          # Google Places integration
+│   │   │   ├── product-search.service.ts        # E-commerce products
+│   │   │   ├── climate-detection.service.ts     # Climate zone detection
+│   │   │   └── pdf-generator.service.ts         # PDF report generation
+│   │   ├── middleware/              # Express middleware
+│   │   └── server.ts                # Server entry point
+│   ├── uploads/                     # Uploaded files
 │   └── package.json
 │
 └── README.md
